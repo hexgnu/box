@@ -1,0 +1,88 @@
+---
+- hosts: all
+  vars:
+    username: hexgnu
+    hostname: ito
+    email: matt@matthewkirk.com
+    ruby_versions:
+      - 2.2.5
+    ssh_keygen_bits: 4096
+    ssh_keygen_types:
+      - ed25519
+  vars_prompt:
+    - name: "ssh_keygen_password"
+      prompt: "What password do you want to use for ssh?"
+  roles:
+    - ssh
+    - ruby
+    - mysql
+  become_method: sudo
+  become: true
+  tasks:  
+    - hostname:
+        name: ito.local
+
+    # Someday revisit to implement better security for this.
+    - service:
+        name: sshd
+        state: started
+
+    - name: Install RPMFusion free
+      tags: [personal]
+      dnf:
+        name: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-25.noarch.rpm
+        state: present
+
+    - name: Install RPMFusion non free
+      tags: [personal]
+      dnf:
+        name: https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-25.noarch.rpm
+        state: present
+
+    - name: Spotify fedora repo
+      tags: [personal]
+      yum_repository: 
+        name: fedora-spotify
+        description: Fedora specific build of spotify clients
+        gpgcheck: yes
+        baseurl: http://negativo17.org/repos/spotify/fedora-$releasever/$basearch/
+        gpgkey: http://negativo17.org/repos/RPM-GPG-KEY-slaanesh
+
+    - name: Install libraries with dnf
+      dnf: name={{ item }} state=installed
+      tags: [system]
+      with_items:
+        - vim
+        - ack
+        - redshift
+        - git
+        - chromium
+        - conky
+        - i3
+        - i3status
+        - dmenu
+        - i3lock
+        - feh
+        - xbacklight
+        - redshift-gtk
+
+    - name: Install personal libraries
+      dnf: name={{ item }} state=installed
+      tags: [personal]
+      with_items:
+        - spotify-client
+
+    - name: Check out dotfiles
+      become: true
+      become_user: hexgnu
+      git:
+        repo: git@github.com:/hexgnu/dotfiles.git
+        dest: /home/hexgnu/git/dotfiles
+
+    - command: bin/dotfiles
+      become: true 
+      become_user: hexgnu
+      args:
+        chdir: /home/hexgnu/git/dotfiles
+
+

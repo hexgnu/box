@@ -1,0 +1,36 @@
+---
+- name: Check .ssh dir
+  file: path=/home/{{ username }}/.ssh state=directory mode=0700 owner={{ username }} group={{ username }}
+
+- name: Create keys
+  become: true
+  become_user: "{{ username }}"
+  command: ssh-keygen -t {{ item }} -b {{ ssh_keygen_bits }} -C "{{ email }}" -N "{{ ssh_keygen_password }}" -f /home/{{ ansible_ssh_user }}/.ssh/id_{{ item }} creates=/home/{{ username }}/.ssh/id_{{ item }} 
+  with_items: 
+   - "{{ ssh_keygen_types }}"
+
+- name: check private keys cert privileges
+  file: 
+    path: /home/{{ username }}/.ssh/id_{{ item }}
+    owner: "{{username}}" 
+    group: "{{username}}"
+    mode: 0600
+  with_items:
+   - "{{ ssh_keygen_types }}"
+
+- name: check public keys cert privileges
+  file: 
+    path: /home/{{ username }}/.ssh/id_{{ item }}.pub
+    owner: "{{username}}" 
+    group: "{{username}}"
+    mode: 0600
+  with_items:
+   - "{{ ssh_keygen_types }}"
+
+- name: ensure github.com is a known host
+  lineinfile:
+    dest: /home/{{username}}/.ssh/known_hosts
+    create: yes
+    state: present
+    line: "{{ lookup('pipe', 'ssh-keyscan -t rsa github.com') }}"
+    regexp: "^github\\.com"
