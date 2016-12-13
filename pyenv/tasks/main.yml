@@ -1,0 +1,20 @@
+---
+- name: Install dependencies for pyenv
+  dnf: pkg={{item}} state=installed
+  with_items:
+    - patch
+
+- name: Checkout pyenv
+  become: true
+  become_user: "{{username}}"
+  git: repo=https://github.com/yyuu/pyenv.git dest=~/.pyenv update=False
+  tags: [python]
+
+- name: Install pythons
+  become: true
+  become_user: "{{username}}"
+  command: pyenv install -s {{item}}
+  with_items:
+    - 2.7.12
+    - 3.5.2
+

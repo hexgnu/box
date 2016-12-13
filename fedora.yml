@@ -16,6 +16,11 @@
     - ssh
     - ruby
     - mysql
+    - elasticsearch
+    - scanning
+    - percona
+    - pyenv
+    - direnv
   become_method: sudo
   become: true
   tasks:  
@@ -65,6 +70,19 @@
         - feh
         - xbacklight
         - redshift-gtk
+        - redis
+        - transmission
+        - pv
+        - shutter
+        - bzip2-devel
+        - sqlite-devel
+        - libsqlite3x-devel
+        - tmate
+        - bzip2-libs
+    - name: Redis server start
+      service:
+        name: redis
+        state: started
 
     - name: Install personal libraries
       dnf: name={{ item }} state=installed
@@ -76,6 +94,7 @@
       become: true
       become_user: hexgnu
       git:
+        update: false
         repo: git@github.com:/hexgnu/dotfiles.git
         dest: /home/hexgnu/git/dotfiles
 

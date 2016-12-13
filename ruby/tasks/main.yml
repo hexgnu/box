@@ -8,6 +8,7 @@
     - readline-devel
     - openssl-devel
     - libyaml-devel
+    - nodejs
     - gcc-c++
 - name: setup rbenv
   become_user: "{{username}}"

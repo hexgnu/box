@@ -1,0 +1,16 @@
+---
+- name: Direnv dependencies
+  dnf: pkg={{item}} state=installed
+  with_items:
+    - golang
+
+- name: Checkout direnv
+  git:
+    update: no
+    repo: https://github.com/direnv/direnv.git
+    dest: /opt/direnv
+
+- name: Build direnv
+  command: make install
+  args:
+    chdir: /opt/direnv
