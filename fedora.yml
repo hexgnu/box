@@ -78,7 +78,9 @@
         - sqlite-devel
         - libsqlite3x-devel
         - tmate
+        - tmux
         - bzip2-libs
+        - htop
     - name: Redis server start
       service:
         name: redis
