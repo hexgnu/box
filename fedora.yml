@@ -21,6 +21,8 @@
     - percona
     - pyenv
     - direnv
+    - maintenance
+    - phantomjs
   become_method: sudo
   become: true
   tasks:  
@@ -81,6 +83,9 @@
         - tmux
         - bzip2-libs
         - htop
+        - colordiff
+        - hddtemp
+        - lm-sensors
     - name: Redis server start
       service:
         name: redis
