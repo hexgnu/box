@@ -13,7 +13,7 @@
 - name: Install pythons
   become: true
   become_user: "{{username}}"
-  command: pyenv install -s {{item}}
+  command: ~/.pyenv/bin/pyenv install -s {{item}}
   with_items:
     - 2.7.12
     - 3.5.2
