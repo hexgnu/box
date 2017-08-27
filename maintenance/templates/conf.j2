@@ -1,0 +1,12 @@
+SOURCE=/
+TARGET='s3://s3.amazonaws.com/ito.local/backup'
+
+# Uncomment if you prefere the more secure public/private key encryption
+GPG_KEY="27594B09"
+GPG_PW="{{ssh_keygen_password}}"
+
+DUPL_PARAMS="$DUPL_PARAMS --volsize 25 "
+
+DUPL_PARAMS="$DUPL_PARAMS --file-prefix-manifest manifest_ "
+DUPL_PARAMS="$DUPL_PARAMS --file-prefix-archive archive_ "
+DUPL_PARAMS="$DUPL_PARAMS --file-prefix-signature signature_"

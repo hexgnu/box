@@ -1,0 +1,24 @@
+---
+- name: Install maintenance dependencies
+  dnf: pkg={{item}} state=installed
+  with_items:
+    - dnf-automatic
+    - duply
+
+- name: Enable and start dnf-automatic
+  systemd:
+    name: dnf-automatic.timer
+    enabled: yes
+    state: started
+
+- name: Install keyrings.alt
+  command: /usr/bin/pip install secretstorage dbus-python
+
+- name: Create duply folder
+  file: path=/etc/duply/{{hostname}} state=directory owner={{username}} recurse=yes
+
+- name: Create duply conf
+  template: src=../templates/conf.j2 dest=/etc/duply/{{hostname}}/conf
+
+- name: Create duply excludes 
+  template: src=../templates/exclude.j2 dest=/etc/duply/{{hostname}}/exclude

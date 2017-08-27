@@ -1,0 +1,21 @@
+---
+- name: Add docker repo
+  tags: [docker]
+  yum_repository:
+    name: dockerrepo
+    description: Docker Repo
+    enabled: yes
+    baseurl: https://yum.dockerproject.org/repo/main/fedora/24/
+    gpgcheck: yes
+    gpgkey: https://yum.dockerproject.org/gpg
+- name: Install docker
+  tags: [docker]
+  dnf: pkg={{item}} state=installed
+  with_items:
+    - docker
+
+- name: Enable docker
+  tags: [docker]
+  service:
+    name: docker
+    state: started

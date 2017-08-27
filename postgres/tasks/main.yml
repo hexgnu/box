@@ -1,0 +1,17 @@
+---
+- name: Install postgres dependencies
+  tags: postgres
+  dnf: pkg={{item}} state=installed
+  with_items:
+    - postgresql-server
+    - postgresql-contrib
+    - postgresql
+    - postgresql-devel
+
+- name: Start postgres
+  service:
+    name: postgresql
+    state: started
+
+
+

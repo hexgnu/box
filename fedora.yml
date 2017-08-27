@@ -14,6 +14,7 @@
       prompt: "What password do you want to use for ssh?"
   roles:
     - ssh
+    - docker
     - ruby
     - mysql
     - elasticsearch
@@ -23,6 +24,8 @@
     - direnv
     - maintenance
     - phantomjs
+    - postgres
+    - orc
   become_method: sudo
   become: true
   tasks:  
@@ -85,7 +88,17 @@
         - htop
         - colordiff
         - hddtemp
-        - lm-sensors
+        - lm_sensors
+        - xss-lock
+        - mongodb
+        - mongodb-server
+        - gnome-shell-extension-pomodoro
+        - cmake
+        - libxml2-devel
+        - libxslt-devel
+        - memcached
+        - fuse-exfat
+        - exfat-utils
     - name: Redis server start
       service:
         name: redis
