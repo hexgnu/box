@@ -1,7 +1,7 @@
 ---
 - name: Install mysql community repo
   dnf:
-    name: https://dev.mysql.com/get/mysql57-community-release-fc24-8.noarch.rpm
+    name: https://dev.mysql.com/get/mysql80-community-release-fc28-1.noarch.rpm
     state: present
 
 - name: Install mysql deps

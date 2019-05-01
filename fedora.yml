@@ -2,10 +2,8 @@
 - hosts: all
   vars:
     username: hexgnu
-    hostname: ito
+    hostname: hilbert
     email: matt@matthewkirk.com
-    ruby_versions:
-      - 2.4.1
     ssh_keygen_bits: 4096
     ssh_keygen_types:
       - ed25519
@@ -14,19 +12,13 @@
       prompt: "What password do you want to use for ssh?"
   roles:
     - ssh
-    - ruby
     - mysql
-    # - elasticsearch
-    # - percona
-    # - pyenv
-    # - maintenance
-    # - phantomjs
-    # - postgres
+    - pyenv
   become_method: sudo
   become: true
   tasks:  
     - hostname:
-        name: ito.local
+        name: hilbert
 
     # Someday revisit to implement better security for this.
     - service:
@@ -36,13 +28,13 @@
     - name: Install RPMFusion free
       tags: [personal]
       dnf:
-        name: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-26.noarch.rpm
+        name: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-30.noarch.rpm
         state: present
 
     - name: Install RPMFusion non free
       tags: [personal]
       dnf:
-        name: https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-26.noarch.rpm
+        name: https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-30.noarch.rpm
         state: present
 
     - name: Spotify fedora repo
@@ -58,22 +50,16 @@
       dnf: name={{ item }} state=latest
       tags: [system]
       with_items:
-        - ack
+        - neovim
         - bzip2
         - bzip2-devel
         - bzip2-libs
-        - chromium
         - cmake
         - colordiff
-        - conky
         - direnv
         - dmenu
         - exfat-utils
-        - feh
-        - fuse-exfat
         - git
-        - gnome-shell-extension-pomodoro
-        - hddtemp
         - htop
         - i3
         - i3lock
@@ -81,32 +67,24 @@
         - libsqlite3x-devel
         - libxml2-devel
         - libxslt-devel
-        - lm_sensors
-        - memcached
-        - mongodb
-        - mongodb-server
         - openssl-devel
         - pv
         - readline-devel
         - redis
         - redshift
         - redshift-gtk
-        - shutter
-        - sqlite
         - sqlite-devel
-        - tmate
         - tmux
-        - transmission
-        - vim-enhanced
         - xbacklight
         - xss-lock
         - xz
         - xz-devel
         - zlib-devel
-    - name: Redis server start
-      service:
-        name: redis
-        state: started
+        - fedora-workstation-repositories
+        - google-chrome-stable
+        - xclip
+        - redhat-rpm-config
+        - highlight
 
     - name: Install personal libraries
       dnf: name={{ item }} state=installed
@@ -127,3 +105,12 @@
       become_user: hexgnu
       args:
         chdir: /home/hexgnu/git/dotfiles
+
+    - command: Check out st
+      become: true
+      become_user: hexgnu
+      git:
+        update: false
+        repo: git@github.com:/hexgnu/st.git
+
+    - command: dnf config-manager --set-enabled google-chrome
