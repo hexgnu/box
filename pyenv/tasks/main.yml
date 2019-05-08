@@ -1,18 +1,25 @@
 ---
 - name: Install dependencies for pyenv
-  dnf: pkg={{item}} state=installed
-  with_items:
-    - patch
+  async: 45
+  poll: 0
+  dnf:
+    name: ['glibc', 'glib2', 'libX11', 'libXfixes', 'libGL', 'sqlite', 'libXrender', 'libXcomposite', 'qt-x11', 'libxslt', 'pulseaudio-libs', 'alsa-lib', 'gstreamer-plugins-base',
+'mesa-dri-drivers']
+    state: present
 
 - name: Checkout pyenv
   become: true
   become_user: "{{username}}"
+  async: 30
+  poll: 0
   git: repo=https://github.com/yyuu/pyenv.git dest=~/.pyenv update=False
   tags: [python]
 
 - name: Install pythons
   become: true
   become_user: "{{username}}"
+  async: 45
+  poll: 0
   command: ~/.pyenv/bin/pyenv install -s {{item}}
   with_items:
-    - anaconda3-5.1.0
+    - 3.7.3

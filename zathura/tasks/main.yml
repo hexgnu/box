@@ -1,0 +1,5 @@
+---
+- name: Install zathura stuff
+  dnf: 
+      name: ["zathura", "zathura-pdf-mupdf", "zathura-ps"]
+      state: present

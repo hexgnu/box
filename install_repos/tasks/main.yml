@@ -1,0 +1,35 @@
+---
+# Downloaded from RPMFusion Free
+
+# Downloaded from RPMFusion non free
+
+- name: Download RPMFusion Free
+  get_url:
+      url: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-30.noarch.rpm
+      dest: /opt/rpm-fusion-free.rpm
+
+- name: Install RPMFusion free
+  tags: [personal]
+  dnf:
+    name: /opt/rpm-fusion-free.rpm
+    state: present
+
+- name: Download RPMFusion non free
+  get_url:
+      url: https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-30.noarch.rpm
+      dest: /opt/rpm-fusion-non-free.rpm
+
+- name: Install RPMFusion non free
+  tags: [personal]
+  dnf:
+    name: /opt/rpm-fusion-non-free.rpm
+    state: present
+
+- name: Spotify fedora repo
+  tags: [personal]
+  yum_repository: 
+    name: fedora-spotify
+    description: Fedora specific build of spotify clients
+    gpgcheck: yes
+    baseurl: http://negativo17.org/repos/spotify/fedora-$releasever/$basearch/
+    gpgkey: http://negativo17.org/repos/RPM-GPG-KEY-slaanesh

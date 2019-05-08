@@ -1,8 +1,8 @@
 ---
 - name: Direnv dependencies
-  dnf: pkg={{item}} state=installed
-  with_items:
-    - golang
+  dnf:
+    name: golang
+    state: present
 
 - name: Checkout direnv
   git:

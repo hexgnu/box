@@ -1,0 +1,6 @@
+---
+- name: install deps
+  dnf: name=compton state=latest
+  tags: [i3]
+
+

@@ -1,0 +1,21 @@
+---
+- name: Install libraries with dnf
+  dnf:
+    name: ['glibc', 'glib2', 'libX11', 'libXfixes', 'libGL', 'sqlite', 'libXrender', 'libXcomposite', 'qt-x11', 'libxslt', 'pulseaudio-libs', 'alsa-lib', 'gstreamer-plugins-base',
+'mesa-dri-drivers']
+    state: present
+  tags: [system]
+
+- name: Import zoom signing key
+  rpm_key:
+          state: present
+          key: https://zoom.us/linux/download/pubkey
+
+
+- name: Download zoom rpm
+  get_url:
+      url: https://zoom.us/client/latest/zoom_x86_64.rpm
+      dest: /opt/zoom_x86_64.rpm
+
+- name: Install zoom
+  yum: name=/opt/zoom_x86_64.rpm state=present

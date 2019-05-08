@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+i3-sensible-terminal -e cmatrix -bC green &
+
+sleep 0.2
+
+i3-msg fullscreen
+
+sleep 0.2
+
+i3lock -n
+
+sleep 0.2
+
+i3-msg kill

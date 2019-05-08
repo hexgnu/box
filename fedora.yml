@@ -1,24 +1,33 @@
 ---
 - hosts: all
+  user: root
+  gather_facts: no
   vars:
     username: hexgnu
-    hostname: hilbert
+    hostname: enso
     email: matt@matthewkirk.com
     ssh_keygen_bits: 4096
     ssh_keygen_types:
       - ed25519
-  vars_prompt:
-    - name: "ssh_keygen_password"
-      prompt: "What password do you want to use for ssh?"
+    pg_databases:
+      - garver
+    pg_password: 'thequickbrownfox'
   roles:
-    - ssh
-    - mysql
+    - install_repos
     - pyenv
+    - zoom
+    - st
+    - slack
+    - dmenu
+    - postgres
+    - vim
+    - i3blocks
+    - zathura
   become_method: sudo
   become: true
   tasks:  
     - hostname:
-        name: hilbert
+        name: enso
 
     # Someday revisit to implement better security for this.
     - service:
@@ -28,7 +37,7 @@
     - name: Install RPMFusion free
       tags: [personal]
       dnf:
-        name: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-30.noarch.rpm
+        name: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-30.noarch.rpm 
         state: present
 
     - name: Install RPMFusion non free
@@ -51,40 +60,31 @@
       tags: [system]
       with_items:
         - neovim
-        - bzip2
-        - bzip2-devel
-        - bzip2-libs
         - cmake
-        - colordiff
         - direnv
         - dmenu
-        - exfat-utils
         - git
         - htop
         - i3
         - i3lock
         - i3status
-        - libsqlite3x-devel
-        - libxml2-devel
-        - libxslt-devel
-        - openssl-devel
         - pv
-        - readline-devel
-        - redis
-        - redshift
-        - redshift-gtk
-        - sqlite-devel
         - tmux
-        - xbacklight
-        - xss-lock
-        - xz
-        - xz-devel
-        - zlib-devel
         - fedora-workstation-repositories
         - google-chrome-stable
         - xclip
         - redhat-rpm-config
         - highlight
+        - adobe-source-code-pro-fonts
+        - npm
+        - nodejs-yarn
+        - lm_sensors
+        - redshift-gtk
+        - awscli
+        - perl-Env
+        - feh
+        - fontawesome-fonts
+        - community-mysql
 
     - name: Install personal libraries
       dnf: name={{ item }} state=installed
@@ -105,12 +105,5 @@
       become_user: hexgnu
       args:
         chdir: /home/hexgnu/git/dotfiles
-
-    - command: Check out st
-      become: true
-      become_user: hexgnu
-      git:
-        update: false
-        repo: git@github.com:/hexgnu/st.git
 
     - command: dnf config-manager --set-enabled google-chrome

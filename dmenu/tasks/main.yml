@@ -1,0 +1,21 @@
+---
+- name: git clone repo
+  tags: [dmenu]
+  become: true
+  become_user: hexgnu
+  git:
+          update: false
+          repo: git://git.suckless.org/dmenu
+          dest: /home/hexgnu/git/dmenu
+- name: install deps
+  dnf:
+    name: libXinerama-devel
+    state: installed
+  tags: [dmenu]
+- name: make dmenu
+  make:
+          chdir: /home/hexgnu/git/dmenu
+- name: make install dmenu
+  make:
+          chdir: /home/hexgnu/git/dmenu
+          target: install

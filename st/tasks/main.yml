@@ -1,0 +1,22 @@
+---
+- name: check out st repo
+  become: true
+  become_user: hexgnu
+  git:
+          update: false
+          repo: git@github.com:hexgnu/st.git
+          dest: /home/hexgnu/git/st
+
+- name: install dependencies
+  dnf:
+    name: ["libXft-devel", "libX11-devel"]
+    state: present
+
+- name: make and install st
+  make:
+          chdir: /home/hexgnu/git/st
+- name: install it
+  make:
+          chdir: /home/hexgnu/git/st
+          target: install
+          

@@ -1,0 +1,8 @@
+---
+- name: install ctrl-p
+  become: true
+  become_user: hexgnu
+  git:
+          update: false
+          repo: https://github.com/ctrlpvim/ctrlp.vim.git
+          dest: /home/hexgnu/.config/nvim/bundle/ctrlp.vim

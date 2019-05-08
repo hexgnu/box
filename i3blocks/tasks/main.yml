@@ -1,0 +1,28 @@
+---
+- name: git clone the i3blocks repo
+  tags: [i3blocks]
+  git:
+      update: false
+      repo: https://github.com/vivien/i3blocks
+      dest: /home/hexgnu/git/i3blocks
+
+- name: autogen the configure file
+  command: ./autogen.sh
+  args:
+      chdir: /home/hexgnu/git/i3blocks
+      creates: /home/hexngu/git/i3blocks/configure
+
+- name: configure
+  command: ./configure
+  args:
+      chdir: /home/hexgnu/git/i3blocks
+      creates: /home/hexgnu/git/i3blocks/i3blocks-config.h
+
+- name: make it
+  make:
+      chdir: /home/hexgnu/git/i3blocks
+
+- name: install it
+  make:
+      chdir: /home/hexgnu/git/i3blocks
+      target: install
