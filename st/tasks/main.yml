@@ -5,7 +5,7 @@
   git:
           update: false
           repo: git@github.com:hexgnu/st.git
-          dest: /home/hexgnu/git/st
+          dest: /home/hexgnu/git/personal/st
 
 - name: install dependencies
   dnf:
@@ -14,9 +14,9 @@
 
 - name: make and install st
   make:
-          chdir: /home/hexgnu/git/st
+          chdir: /home/hexgnu/git/personal/st
 - name: install it
   make:
-          chdir: /home/hexgnu/git/st
+          chdir: /home/hexgnu/git/personal/st
           target: install
           

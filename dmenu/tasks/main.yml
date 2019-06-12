@@ -6,7 +6,7 @@
   git:
           update: false
           repo: git://git.suckless.org/dmenu
-          dest: /home/hexgnu/git/dmenu
+          dest: /home/hexgnu/git/personal/dmenu
 - name: install deps
   dnf:
     name: libXinerama-devel
@@ -14,8 +14,8 @@
   tags: [dmenu]
 - name: make dmenu
   make:
-          chdir: /home/hexgnu/git/dmenu
+          chdir: /home/hexgnu/git/personal/dmenu
 - name: make install dmenu
   make:
-          chdir: /home/hexgnu/git/dmenu
+          chdir: /home/hexgnu/git/personal/dmenu
           target: install

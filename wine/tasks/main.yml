@@ -1,0 +1,5 @@
+---
+- name: Install wine
+  dnf:
+      name: wine
+      state: present

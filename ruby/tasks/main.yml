@@ -1,15 +1,10 @@
 ---
 - name: Install ruby dependencies
-  dnf: pkg={{item}} state=installed
+  dnf:
+    pkg: ['libffi-devel', 'readline-devel', 'openssl-devel', 'libyaml-devel', 'nodejs', 'gcc-c++', 'sqlite-devel']
+    state: installed
   become: true
   tags: [ruby]
-  with_items:
-    - libffi-devel
-    - readline-devel
-    - openssl-devel
-    - libyaml-devel
-    - nodejs
-    - gcc-c++
 - name: setup rbenv
   become_user: "{{username}}"
   become: true

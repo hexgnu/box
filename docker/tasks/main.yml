@@ -10,9 +10,9 @@
     gpgkey: https://yum.dockerproject.org/gpg
 - name: Install docker
   tags: [docker]
-  dnf: pkg={{item}} state=installed
-  with_items:
-    - docker
+  dnf:
+    name: ['docker', 'docker-compose']
+    state: present
 
 - name: Enable docker
   tags: [docker]

@@ -1,0 +1,5 @@
+---
+- name: install virtualbox
+  dnf:
+      pkg: ['VirtualBox', 'akmod-VirtualBox', 'kernel-devel', 'unrar']
+      state: present

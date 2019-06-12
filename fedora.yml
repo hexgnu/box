@@ -12,17 +12,25 @@
     pg_databases:
       - garver
     pg_password: 'thequickbrownfox'
+    ruby_versions:
+        - 2.6.3
+    python_versions:
+        - 3.7.3
+        - 2.7.16
   roles:
-    - install_repos
-    - pyenv
-    - zoom
-    - st
-    - slack
     - dmenu
-    - postgres
-    - vim
+    - docker
     - i3blocks
+    - install_repos
+    - postgres
+    - pyenv
+    - ruby
+    - slack
+    - st
+    - vim
     - zathura
+    - zoom
+    - wine
   become_method: sudo
   become: true
   tasks:  
@@ -59,6 +67,7 @@
       dnf: name={{ item }} state=latest
       tags: [system]
       with_items:
+        - ShellCheck
         - neovim
         - cmake
         - direnv
@@ -85,6 +94,7 @@
         - feh
         - fontawesome-fonts
         - community-mysql
+        - vlc
 
     - name: Install personal libraries
       dnf: name={{ item }} state=installed
@@ -98,12 +108,12 @@
       git:
         update: false
         repo: git@github.com:/hexgnu/dotfiles.git
-        dest: /home/hexgnu/git/dotfiles
+        dest: /home/hexgnu/git/personal/dotfiles
 
     - command: bin/dotfiles
       become: true 
       become_user: hexgnu
       args:
-        chdir: /home/hexgnu/git/dotfiles
+        chdir: /home/hexgnu/git/personal/dotfiles
 
     - command: dnf config-manager --set-enabled google-chrome

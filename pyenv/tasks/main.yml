@@ -20,6 +20,7 @@
   become_user: "{{username}}"
   async: 45
   poll: 0
-  command: ~/.pyenv/bin/pyenv install -s {{item}}
+  command: ~/.pyenv/bin/pyenv install -s {{ item }}
   with_items:
-    - 3.7.3
+      - 3.7.3
+      - 2.7.16
