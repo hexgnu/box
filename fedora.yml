@@ -6,6 +6,7 @@
     username: hexgnu
     hostname: enso
     email: matt@matthewkirk.com
+    ansible_python_interpreter: /usr/bin/python3
     ssh_keygen_bits: 4096
     ssh_keygen_types:
       - ed25519
@@ -22,15 +23,17 @@
     - docker
     - i3blocks
     - install_repos
-    - postgres
+    - elasticsearch
+ #   - postgres
     - pyenv
-    - ruby
+ #   - ruby
     - slack
     - st
     - vim
     - zathura
     - zoom
     - wine
+    - lenovo
   become_method: sudo
   become: true
   tasks:  
@@ -63,6 +66,9 @@
         baseurl: http://negativo17.org/repos/spotify/fedora-$releasever/$basearch/
         gpgkey: http://negativo17.org/repos/RPM-GPG-KEY-slaanesh
 
+    - command: dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/x86_64/
+    - command: rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+
     - name: Install libraries with dnf
       dnf: name={{ item }} state=latest
       tags: [system]
@@ -80,7 +86,7 @@
         - pv
         - tmux
         - fedora-workstation-repositories
-        - google-chrome-stable
+        - brave-browser
         - xclip
         - redhat-rpm-config
         - highlight
@@ -115,5 +121,3 @@
       become_user: hexgnu
       args:
         chdir: /home/hexgnu/git/personal/dotfiles
-
-    - command: dnf config-manager --set-enabled google-chrome

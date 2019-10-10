@@ -8,13 +8,13 @@
 - name: setup rbenv
   become_user: "{{username}}"
   become: true
-  git: repo=git@github.com:sstephenson/rbenv.git dest=~/.rbenv update=False
+  git: repo=https://github.com/rbenv/rbenv.git dest=~/.rbenv update=False
   tags: [ruby]
 
 - name: setup ruby-build
   become: true
   become_user: "{{username}}"
-  git: repo=git@github.com:sstephenson/ruby-build.git dest=~/.rbenv/plugins/ruby-build update=False
+  git: repo=https://github.com/rbenv/ruby-build dest=~/.rbenv/plugins/ruby-build update=False
   tags: [ruby]
 
 - name: Configure extensions for rbenv
