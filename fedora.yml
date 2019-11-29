@@ -101,6 +101,7 @@
         - fontawesome-fonts
         - community-mysql
         - vlc
+        - pam_yubico
 
     - name: Install personal libraries
       dnf: name={{ item }} state=installed
