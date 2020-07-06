@@ -100,7 +100,6 @@
         - i3
         - i3lock
         - i3status
-        # - pam_yubico
 
     - name: Check out dotfiles
       become: true
