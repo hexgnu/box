@@ -1,7 +1,7 @@
 ---
 - name: Install elasticsearch dependencies
   dnf:
-    pkg: ['java-openjdk-devel', 'java-openjdk']
+    pkg: ['java-devel', 'java']
     state: installed
 
 - name: Add elasticsearch signing key

@@ -5,7 +5,7 @@
 
 - name: Download RPMFusion Free
   get_url:
-      url: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-30.noarch.rpm
+      url: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-31.noarch.rpm
       dest: /opt/rpm-fusion-free.rpm
 
 - name: Install RPMFusion free
@@ -16,7 +16,7 @@
 
 - name: Download RPMFusion non free
   get_url:
-      url: https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-30.noarch.rpm
+      url: https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-31.noarch.rpm
       dest: /opt/rpm-fusion-non-free.rpm
 
 - name: Install RPMFusion non free

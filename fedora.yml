@@ -4,41 +4,36 @@
   gather_facts: no
   vars:
     username: hexgnu
-    hostname: enso
+    hostname: neptune.home
     email: matt@matthewkirk.com
     ansible_python_interpreter: /usr/bin/python3
     ssh_keygen_bits: 4096
     ssh_keygen_types:
       - ed25519
-    pg_databases:
-      - garver
-    pg_password: 'thequickbrownfox'
-    ruby_versions:
-        - 2.6.3
     python_versions:
         - 3.7.3
         - 2.7.16
   roles:
-    - dmenu
-    - docker
-    - i3blocks
+ #   - dmenu
+ #   - docker
+ #   - i3blocks
     - install_repos
     - elasticsearch
  #   - postgres
     - pyenv
  #   - ruby
-    - slack
+ #   - slack
     - st
     - vim
-    - zathura
-    - zoom
-    - wine
-    - lenovo
+ #   - zathura
+ #   - zoom
+ #   - wine
+ #   - lenovo
   become_method: sudo
   become: true
   tasks:  
     - hostname:
-        name: enso
+        name: neptune.home
 
     # Someday revisit to implement better security for this.
     - service:
@@ -48,26 +43,17 @@
     - name: Install RPMFusion free
       tags: [personal]
       dnf:
-        name: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-30.noarch.rpm 
+        name: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-31.noarch.rpm 
         state: present
 
     - name: Install RPMFusion non free
       tags: [personal]
       dnf:
-        name: https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-30.noarch.rpm
+        name: https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-31.noarch.rpm
         state: present
 
-    - name: Spotify fedora repo
-      tags: [personal]
-      yum_repository: 
-        name: fedora-spotify
-        description: Fedora specific build of spotify clients
-        gpgcheck: yes
-        baseurl: http://negativo17.org/repos/spotify/fedora-$releasever/$basearch/
-        gpgkey: http://negativo17.org/repos/RPM-GPG-KEY-slaanesh
-
-    - command: dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/x86_64/
-    - command: rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+    #    - command: dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/x86_64/
+     #- command: rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
 
     - name: Install libraries with dnf
       dnf: name={{ item }} state=latest
@@ -80,9 +66,6 @@
         - dmenu
         - git
         - htop
-        - i3
-        - i3lock
-        - i3status
         - pv
         - tmux
         - fedora-workstation-repositories
@@ -101,12 +84,23 @@
         - fontawesome-fonts
         - community-mysql
         - vlc
-
-    - name: Install personal libraries
-      dnf: name={{ item }} state=installed
-      tags: [personal]
-      with_items:
-        - spotify-client
+        - lpf-spotify-client
+        - dwm
+        - dwm-user
+        - libffi-devel
+        - zlib-devel
+        - bzip2
+        - bzip2-devel
+        - readline-devel
+        - sqlite
+        - sqlite-devel
+        - openssl-devel
+        - xz
+        - xz-devel
+        - i3
+        - i3lock
+        - i3status
+        # - pam_yubico
 
     - name: Check out dotfiles
       become: true

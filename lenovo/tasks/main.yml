@@ -4,13 +4,14 @@
 ---
 - name: Install tlp repo
   dnf:
-      name: http://repo.linrunner.de/fedora/tlp/repos/releases/tlp-release.fc30.noarch.rpm
+      name: http://repo.linrunner.de/fedora/tlp/repos/releases/tlp-release.fc31.noarch.rpm
       state: present
 
-- name: Enable throttled copr
-  command: "dnf copr enable abn/throttled"
-  args:
-      creates: /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:abn:throttled.repo
+# Problem is that copr for this is not up to date with fedora
+#- name: Enable throttled copr
+#  command: "dnf copr enable abn/throttled"
+#  args:
+#      creates: /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:abn:throttled.repo
 
 - name: Install fwupd
   dnf:
