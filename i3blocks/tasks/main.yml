@@ -5,6 +5,12 @@
       update: false
       repo: https://github.com/vivien/i3blocks
       dest: /home/hexgnu/git/personal/i3blocks
+- name: Install dependencies
+  dnf:
+      name:
+          - autoconf
+          - automake
+      state: latest
 
 - name: autogen the configure file
   command: ./autogen.sh

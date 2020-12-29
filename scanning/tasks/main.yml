@@ -1,6 +1,0 @@
----
-- name: Install scanner dependencies
-  dnf: pkg={{item}} state=installed
-  with_items:
-    - gscan2pdf
-    - tesseract

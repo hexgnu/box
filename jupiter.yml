@@ -1,0 +1,98 @@
+---
+- hosts: all
+  user: root
+  gather_facts: no
+  vars:
+    username: hexgnu
+    hostname: jupiter.home
+    email: matt@matthewkirk.com
+    ansible_python_interpreter: /usr/bin/python3
+    ssh_keygen_bits: 4096
+    ssh_keygen_types:
+      - ed25519
+  roles:
+    - miniconda
+    - i3blocks
+    - flatpak
+    - st
+    - vim
+  become_method: sudo
+  become: true
+  tasks:  
+    - hostname:
+        name: jupiter.home
+
+    # Someday revisit to implement better security for this.
+    - service:
+        name: sshd
+        state: started
+
+    - name: Install RPMFusion free
+      tags: [personal]
+      dnf:
+        name: https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-33.noarch.rpm
+        disable_gpg_check: yes
+        state: present
+
+    - name: Install RPMFusion non free
+      tags: [personal]
+      dnf:
+        disable_gpg_check: yes
+        name: https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-33.noarch.rpm
+        state: present
+
+    - command: dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/x86_64/
+    - command: rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+
+    - name: Install libraries with dnf
+      dnf: 
+        state: latest
+        name:
+            - ShellCheck
+            - neovim
+            - cmake
+            - direnv
+            - dmenu
+            - git
+            - htop
+            - pv
+            - tmux
+            - brave-browser
+            - xclip
+            - redhat-rpm-config
+            - highlight
+            - adobe-source-code-pro-fonts
+            - npm
+            - nodejs-yarn
+            - redshift-gtk
+            - awscli
+            - feh
+            - fontawesome-fonts
+            - vlc
+            - libffi-devel
+            - zlib-devel
+            - bzip2
+            - bzip2-devel
+            - readline-devel
+            - sqlite
+            - sqlite-devel
+            - openssl-devel
+            - xz
+            - xz-devel
+            - i3
+            - i3lock
+            - i3status
+
+    - name: Check out dotfiles
+      become: true
+      become_user: hexgnu
+      git:
+        update: false
+        repo: git@github.com:/hexgnu/dotfiles.git
+        dest: /home/hexgnu/git/personal/dotfiles
+
+    - command: bin/dotfiles
+      become: true 
+      become_user: hexgnu
+      args:
+        chdir: /home/hexgnu/git/personal/dotfiles

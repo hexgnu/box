@@ -1,0 +1,15 @@
+---
+- name: install flatpak
+  dnf: name=flatpak state=latest
+
+- name: enable flatpak
+  command: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+- name: install spotify
+  command: flatpak install -y flathub com.spotify.Client
+
+- name: install slack
+  command: flatpak install -y flathub com.slack.Slack
+
+- name: install zoom
+  command: flatpak install -y flathub us.zoom.Zoom
