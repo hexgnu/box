@@ -8,8 +8,5 @@
 # - name: install spotify
 #   command: flatpak install -y flathub com.spotify.Client
 
-- name: install slack
-  command: flatpak install -y flathub com.slack.Slack
-
 - name: install zoom
   command: flatpak install -y flathub us.zoom.Zoom
