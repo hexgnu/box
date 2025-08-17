@@ -15,12 +15,12 @@
       - pkgconfig
 - name: enable rpm fusion
   dnf:
-    name: https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-39.noarch.rpm 
+    name: "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ fedora_version | default(42) }}.noarch.rpm"
     state: present
 
-- name: enable rpm fusion
+- name: enable rpm fusion nonfree
   dnf:
-    name: https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-39.noarch.rpm
+    name: "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ fedora_version | default(42) }}.noarch.rpm"
     state: present
 
 - name: makecache
@@ -32,34 +32,48 @@
     name:
       - akmod-nvidia
       - xorg-x11-drv-nvidia-cuda
-# - name: Add nvidia repo
-#   dnf:
-#     enablerepo: https://developer.download.nvidia.com/compute/cuda/repos/fedora37/x86_64/cuda-fedora37.repo
-#     disable_gpg_check: yes
-#     state: present
-# - name: install preconditions for nvidia
-#   dnf:
-#     state: latest
-#     name:
-#       - kernel-headers
-#       - kernel-devel
-#       - tar
-#       - bzip2
-#       - make
-#       - automake
-#       - gcc
-#       - gcc-c++
-#       - pciutils
-#       - elfutils-libelf-devel
-#       - libglvnd-opengl
-#       - libglvnd-glx
-#       - libglvnd-devel
-#       - acpid
-#       - pkgconfig
-#       - dkms
-# 
-# - name: install latest module
-#   dnf:
-#     state: latest
-#     name:
-#       - "@nvidia-driver:latest-dkms"
+
+- name: Install CUDA packages from RPMFusion
+  dnf:
+    state: latest
+    name:
+      - xorg-x11-drv-nvidia-cuda-libs
+      - nvidia-driver-cuda
+      - cuda-toolkit
+      - nvidia-driver-NVML
+      - nvidia-driver-devel
+
+- name: Install additional CUDA development tools
+  dnf:
+    state: latest
+    name:
+      - gcc-c++
+      - cmake
+      - python3-pycuda
+  tags: cuda_dev
+
+- name: Set up CUDA environment variables
+  blockinfile:
+    path: /etc/profile.d/cuda.sh
+    create: yes
+    mode: '0644'
+    block: |
+      export PATH=/usr/local/cuda/bin:$PATH
+      export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+      export CUDA_HOME=/usr/local/cuda
+- name: Ensure nvidia kernel module is loaded
+  modprobe:
+    name: nvidia
+    state: present
+  ignore_errors: yes
+
+- name: Check nvidia-smi is working
+  command: nvidia-smi
+  register: nvidia_smi_result
+  ignore_errors: yes
+  changed_when: false
+
+- name: Display nvidia-smi output
+  debug:
+    var: nvidia_smi_result.stdout_lines
+  when: nvidia_smi_result.rc == 0
