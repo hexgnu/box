@@ -2,19 +2,11 @@
 # Developer Tools Installation Role
 
 # GitHub CLI
-- name: Import GitHub CLI GPG key
-  rpm_key:
-    state: present
-    key: https://rpm.githubpackages.com/githubcli.gpg.key
-
-- name: Add GitHub CLI repository
-  yum_repository:
-    name: gh-cli
-    description: GitHub CLI
-    baseurl: https://rpm.githubpackages.com/rpm
-    enabled: yes
-    gpgcheck: yes
-    gpgkey: https://rpm.githubpackages.com/githubcli.gpg.key
+- name: Add GitHub CLI repository from official repo file
+  get_url:
+    url: https://cli.github.com/packages/rpm/gh-cli.repo
+    dest: /etc/yum.repos.d/gh-cli.repo
+    mode: '0644'
 
 - name: Install GitHub CLI
   dnf:
@@ -93,19 +85,30 @@
   when: not hadolint_installed.stat.exists
 
 # Additional useful Rust tools (optional)
-- name: Install common Rust development tools via cargo
+- name: Check which Rust tools are already installed
+  stat:
+    path: "/home/{{ username }}/.cargo/bin/{{ item }}"
+  register: rust_tools_check
   become: yes
   become_user: "{{ username }}"
-  command: "cargo install {{ item }}"
-  args:
-    creates: "/home/{{ username }}/.cargo/bin/{{ item }}"
   loop:
     - ripgrep
     - fd-find
     - bat
     - exa
     - tokei
-  ignore_errors: yes
+  tags: [rust_tools]
+
+- name: Install common Rust development tools via cargo
+  become: yes
+  become_user: "{{ username }}"
+  command: "cargo install {{ item.item }}"
+  loop: "{{ rust_tools_check.results }}"
+  when: not item.stat.exists
+  register: cargo_install_results
+  failed_when: false
+  loop_control:
+    label: "{{ item.item }}"
   tags: [rust_tools]
 
 # Set up Rust environment for user

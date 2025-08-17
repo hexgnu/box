@@ -112,4 +112,5 @@
     pip install pipx poetry black isort flake8 mypy pytest ipython
   args:
     executable: /bin/bash
-  ignore_errors: yes
+  register: python_tools_install
+  failed_when: false

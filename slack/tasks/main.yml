@@ -2,9 +2,16 @@
 # Slack installation - More maintainable approach
 
 # Option 1: Use Flatpak (RECOMMENDED - auto-updates, sandboxed)
+- name: Check if Slack is already installed via Flatpak
+  command: flatpak list --app | grep com.slack.Slack
+  register: slack_flatpak_check
+  failed_when: false
+  changed_when: false
+  tags: [slack_flatpak]
+
 - name: Install Slack via Flatpak
   command: flatpak install -y flathub com.slack.Slack
-  ignore_errors: yes
+  when: slack_flatpak_check.rc != 0
   tags: [slack_flatpak]
 
 # Option 2: Official Slack repository method (if Flatpak not preferred)
@@ -65,8 +72,13 @@
   tags: [slack_direct]
 
 # Desktop integration
+- name: Check if Slack desktop file exists
+  stat:
+    path: /usr/share/applications/slack.desktop
+  register: slack_desktop_file
+
 - name: Ensure Slack desktop file has proper permissions
   file:
     path: /usr/share/applications/slack.desktop
     mode: '0644'
-  ignore_errors: yes
+  when: slack_desktop_file.stat.exists

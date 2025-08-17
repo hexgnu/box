@@ -7,13 +7,21 @@
     name:
       - podman
       - podman-compose
-      - podman-docker    # Provides docker command compatibility
+      # - podman-docker    # Removed: conflicts with docker-ce-cli
       - buildah          # For building container images
       - skopeo           # For working with container registries
       - slirp4netns      # User-mode networking for rootless containers
       - fuse-overlayfs   # Better filesystem performance for rootless
       - containernetworking-plugins
       - python3-pip      # For podman-compose if needed via pip
+
+- name: Check if user systemd is available
+  command: systemctl --user status
+  become: yes
+  become_user: "{{ username }}"
+  register: user_systemd_check
+  failed_when: false
+  changed_when: false
 
 - name: Enable podman socket for user (Docker API compatibility)
   become: yes
@@ -24,7 +32,7 @@
     state: started
     scope: user
     daemon_reload: yes
-  ignore_errors: yes
+  when: user_systemd_check.rc == 0
 
 - name: Configure registries for podman
   copy:
@@ -62,12 +70,12 @@
     path: "/home/{{ username }}/.bashrc"
     create: yes
     block: |
-      # Podman aliases for Docker compatibility
-      alias docker='podman'
-      alias docker-compose='podman-compose'
+      # Podman is available alongside Docker CE
+      # Use 'podman' for rootless containers
+      # Use 'docker' for Docker CE containers
       
-      # Set Docker host for compatibility with tools expecting Docker
-      export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
+      # Optional: Set Docker host for Docker CE (uncomment if needed)
+      # export DOCKER_HOST="unix:///var/run/docker.sock"
     marker: "# {mark} ANSIBLE MANAGED BLOCK - PODMAN"
 
 - name: Create podman configuration directory for user
@@ -107,24 +115,18 @@
     - docker.io/library/alpine:latest
     - docker.io/library/ubuntu:latest
     - registry.fedoraproject.org/fedora:latest
-  ignore_errors: yes
+  register: image_pull_results
+  failed_when: false
   tags: [podman_images]
 
-- name: Create docker-compose wrapper script for better compatibility
-  copy:
-    dest: /usr/local/bin/docker-compose-compat
-    content: |
-      #!/bin/bash
-      # Wrapper script for docker-compose compatibility
-      exec podman-compose "$@"
-    mode: '0755'
+# Docker-compose wrapper removed - using podman-compose directly
 
 - name: Display Podman installation info
   debug:
     msg: |
       Podman has been installed and configured!
-      - Use 'podman' command directly or 'docker' alias
-      - Use 'podman-compose' for docker-compose files
+      - Use 'podman' for rootless containers
+      - Use 'docker' for Docker CE containers
+      - Use 'podman-compose' for compose files
       - Rootless containers are fully configured
-      - Docker socket compatibility is enabled
       - Run 'podman info' to verify installation

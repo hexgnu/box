@@ -5,13 +5,25 @@
 - name: enable flatpak
   command: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-- name: install Tidal-Hifi for music streaming
-  command: flatpak install -y flathub com.mastermindzh.tidal-hifi
-  ignore_errors: yes
+- name: Check if Tidal-Hifi is already installed
+  command: flatpak list --app | grep com.mastermindzh.tidal-hifi
+  register: tidal_check
+  failed_when: false
+  changed_when: false
 
-- name: install Slack for team communication
+- name: Install Tidal-Hifi for music streaming
+  command: flatpak install -y flathub com.mastermindzh.tidal-hifi
+  when: tidal_check.rc != 0
+
+- name: Check if Slack is already installed
+  command: flatpak list --app | grep com.slack.Slack
+  register: slack_check
+  failed_when: false
+  changed_when: false
+
+- name: Install Slack for team communication
   command: flatpak install -y flathub com.slack.Slack
-  ignore_errors: yes
+  when: slack_check.rc != 0
 
 # Optional applications (uncomment to enable)
 # - name: install spotify

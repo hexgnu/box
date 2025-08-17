@@ -194,10 +194,11 @@
     group: "{{ username }}"
   become: yes
   become_user: "{{ username }}"
+  register: ssh_backup_result
+  failed_when: false
   when: 
     - backup_keys | default(true)
     - ssh_key_check.results[0].stat.exists or ssh_key_check.results[1].stat.exists
-  ignore_errors: yes
 
 - name: Export and backup GPG keys
   block:
@@ -205,33 +206,44 @@
       shell: gpg --armor --export > "/home/{{ username }}/key-backups/{{ ansible_date_time.date | default(lookup('pipe', 'date +%Y-%m-%d')) }}/gpg-public.asc"
       become: yes
       become_user: "{{ username }}"
+      failed_when: false
       when: gpg_key_check.rc == 0
 
     - name: Export GPG private keys
       shell: gpg --armor --export-secret-keys > "/home/{{ username }}/key-backups/{{ ansible_date_time.date | default(lookup('pipe', 'date +%Y-%m-%d')) }}/gpg-private.asc"
       become: yes
       become_user: "{{ username }}"
+      failed_when: false
       when: gpg_key_check.rc == 0
 
     - name: Export GPG trust database
       shell: gpg --export-ownertrust > "/home/{{ username }}/key-backups/{{ ansible_date_time.date | default(lookup('pipe', 'date +%Y-%m-%d')) }}/gpg-trust.txt"
       become: yes
       become_user: "{{ username }}"
+      failed_when: false
       when: gpg_key_check.rc == 0
   when: backup_keys | default(true)
-  ignore_errors: yes
 
 # Display key information
-- name: Get SSH public key fingerprints
-  shell: ssh-keygen -lf "/home/{{ username }}/.ssh/{{ item }}.pub"
-  register: ssh_fingerprints
-  become: yes
-  become_user: "{{ username }}"
+- name: Check SSH public key files exist
+  stat:
+    path: "/home/{{ username }}/.ssh/{{ item }}.pub"
+  register: ssh_pub_files
   loop:
     - id_ed25519
     - id_rsa
-  ignore_errors: yes
+
+- name: Get SSH public key fingerprints
+  shell: ssh-keygen -lf "/home/{{ username }}/.ssh/{{ item.item }}.pub"
+  register: ssh_fingerprints
+  become: yes
+  become_user: "{{ username }}"
+  loop: "{{ ssh_pub_files.results }}"
+  when: item.stat.exists
+  failed_when: false
   changed_when: false
+  loop_control:
+    label: "{{ item.item }}"
 
 - name: Display SSH key information
   debug:

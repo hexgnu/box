@@ -1,4 +1,13 @@
 ---
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║                    ⚡️✨ SAILOR JUPITER SYSTEM CONFIG ✨⚡️                    ║
+# ║                                                                              ║
+# ║                         Protected by Jupiter                                 ║
+# ║                      Guardian of Thunder & Courage                           ║
+# ║                                                                              ║
+# ║                          木野 まこと (Makoto Kino)                              ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
 - hosts: all
   user: root
   gather_facts: no
@@ -11,6 +20,23 @@
     ssh_keygen_types:
       - ed25519
     fedora_version: 39
+  
+  pre_tasks:
+    - name: "⚡ Sailor Jupiter Power Make Up! ⚡"
+      shell: |
+        echo ""
+        echo "        ✨⚡🌸 TRANSFORMATION SEQUENCE INITIATED 🌸⚡✨"
+        echo ""
+        echo "              'Jupiter Star Power, Make Up!'"
+        echo ""
+        python3 /home/hexgnu/git/personal/box/sailor_jupiter_banner.py 2>/dev/null || true
+        echo ""
+        echo "        System configuration transformation beginning..."
+        echo ""
+      delegate_to: localhost
+      run_once: true
+      tags: always
+
   roles:
     - keys              # SSH/GPG key management (run first)
     # - i3blocks
@@ -25,6 +51,7 @@
     - nvidia
   become_method: sudo
   become: true
+  
   tasks:  
     - hostname:
         name: jupiter.home
@@ -48,62 +75,17 @@
         name: "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ fedora_version }}.noarch.rpm"
         state: present
 
-    - command: dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/x86_64/
-    - command: rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
-
-    - name: Install libraries with dnf
-      dnf: 
-        state: latest
-        name:
-            - gnome-screenshot
-            - ShellCheck
-            - neovim
-            - cmake
-            - direnv
-            - dmenu
-            - git
-            - htop
-            - pv
-            - tmux
-            - brave-browser
-            - xclip
-            - redhat-rpm-config
-            - highlight
-            - adobe-source-code-pro-fonts
-            - npm
-            - nodejs-yarn
-            - redshift-gtk
-            - awscli
-            - feh
-            - fontawesome-fonts
-            - vlc
-            - libffi-devel
-            - zlib-devel
-            - bzip2
-            - bzip2-devel
-            - readline-devel
-            - sqlite
-            - sqlite-devel
-            - openssl-devel
-            - xz
-            - xz-devel
-            - i3
-            - i3lock
-            - i3status
-            - libpq-devel
-            - community-mysql-devel
-            - community-mysql
-
-    - name: Check out dotfiles
-      become: true
-      become_user: hexgnu
-      git:
-        update: false
-        repo: git@github.com:/hexgnu/dotfiles.git
-        dest: /home/hexgnu/git/personal/dotfiles
-
-    - command: bin/dotfiles
-      become: true 
-      become_user: hexgnu
-      args:
-        chdir: /home/hexgnu/git/personal/dotfiles
+  post_tasks:
+    - name: "✨ Transformation Complete! ✨"
+      shell: |
+        echo ""
+        echo "═══════════════════════════════════════════════════════════"
+        echo "    🌸 'In the name of Jupiter, I'll punish you!' 🌸"
+        echo ""
+        echo "         System {{ hostname }} configured successfully!"
+        echo "              Protected by Sailor Jupiter ⚡"
+        echo "═══════════════════════════════════════════════════════════"
+        echo ""
+      delegate_to: localhost
+      run_once: true
+      tags: always
