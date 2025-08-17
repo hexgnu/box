@@ -8,9 +8,3 @@
       - asciidoc
       - asciidoc-latex
     state: latest
-
-- name: Install the nginx rpm from a remote repo
-  dnf:
-    name: 'https://github.com/Zettlr/Zettlr/releases/download/v1.8.5/Zettlr-1.8.5-x86_64.rpm'
-    state: present
-    disable_gpg_check: yes

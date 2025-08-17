@@ -5,8 +5,10 @@
 - name: enable flatpak
   command: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
+- name: install ytmdesktop
+  command: flatpak install -y flathub app.ytmdesktop.ytmdesktop
 # - name: install spotify
 #   command: flatpak install -y flathub com.spotify.Client
 
-- name: install zoom
-  command: flatpak install -y flathub us.zoom.Zoom
+    # - name: install zoom
+    #   command: flatpak install -y flathub us.zoom.Zoom

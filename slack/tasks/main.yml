@@ -1,11 +1,12 @@
 ---
 - name: Download slack file
-  command: 'wget "https://downloads.slack-edge.com/linux_releases/slack-4.1.2-0.1.fc21.x86_64.rpm" -o /opt/slack.rpm'
+  command: 'wget "https://downloads.slack-edge.com/desktop-releases/linux/x64/4.37.94/slack-4.37.94-0.1.el8.x86_64.rpm" -o /opt/slack.rpm'
   args:
       chdir: /opt
-      creates: /opt/slack-4.1.2-0.1.fc21.x86_64.rpm
+      creates: /opt/slack-4.37.94-0.1.el8.x86_64.rpm
 
 - name: Rpm install slack file
   yum: 
-    name: /opt/slack-4.1.2-0.1.fc21.x86_64.rpm
+    name: /opt/slack-4.37.94-0.1.el8.x86_64.rpm
     state: present
+    disable_gpg_check: true

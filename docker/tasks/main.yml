@@ -1,21 +1,44 @@
 ---
-- name: Add docker repo
-  tags: [docker]
-  yum_repository:
-    name: dockerrepo
-    description: Docker Repo
-    enabled: yes
-    baseurl: https://yum.dockerproject.org/repo/main/fedora/24/
-    gpgcheck: yes
-    gpgkey: https://yum.dockerproject.org/gpg
-- name: Install docker
-  tags: [docker]
+- name: install dnf plugins
   dnf:
-    name: ['docker', 'docker-compose']
+    name: dnf-plugins-core
     state: present
+- name: add repository
+  dnf:
+    enablerepo: https://download.docker.com/linux/fedora/docker-ce.repo 
+
+- name: install docker stuff
+  dnf:
+    state: latest
+    name: 
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
 
 - name: Enable docker
-  tags: [docker]
   service:
     name: docker
     state: started
+
+# - name: Add docker repo
+#   tags: [docker]
+#   yum_repository:
+#     name: dockerrepo
+#     description: Docker Repo
+#     enabled: yes
+#     baseurl: https://yum.dockerproject.org/repo/main/fedora/24/
+#     gpgcheck: yes
+#     gpgkey: https://yum.dockerproject.org/gpg
+# - name: Install docker
+#   tags: [docker]
+#   dnf:
+#     name: ['docker', 'docker-compose']
+#     state: present
+# 
+# - name: Enable docker
+#   tags: [docker]
+#   service:
+#     name: docker
+#     state: started

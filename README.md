@@ -1,7 +1,4 @@
-sudo dnf install ansible python2-dnf
+sudo dnf install ansible
 
 
-* Proton-mail bridge?
-** qt5-qtmultimedia
-
-
+Setup github credentials

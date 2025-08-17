@@ -12,11 +12,16 @@
       - ed25519
   roles:
     - miniconda
-    - i3blocks
+    # - i3blocks
     - flatpak
     - st
     - vim
-    - authoring
+    - rbenv
+    # - authoring
+    - slack
+    - nvidia
+    - docker
+    # - postgres
   become_method: sudo
   become: true
   tasks:  
@@ -31,7 +36,7 @@
     - name: Install RPMFusion free
       tags: [personal]
       dnf:
-        name: https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-33.noarch.rpm
+        name: https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-39.noarch.rpm
         disable_gpg_check: yes
         state: present
 
@@ -39,7 +44,7 @@
       tags: [personal]
       dnf:
         disable_gpg_check: yes
-        name: https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-33.noarch.rpm
+        name: https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-39.noarch.rpm
         state: present
 
     - command: dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/x86_64/
@@ -49,6 +54,7 @@
       dnf: 
         state: latest
         name:
+            - gnome-screenshot
             - ShellCheck
             - neovim
             - cmake
