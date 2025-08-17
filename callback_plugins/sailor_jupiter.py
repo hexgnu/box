@@ -162,9 +162,41 @@ class CallbackModule(CallbackBase):
         msg = f"  {symbol} [{status}] {host} | {task}"
         self._display.display(stringc(msg, color))
         
+        # Display comprehensive error information
         if 'msg' in result._result:
             error_msg = result._result['msg']
             self._display.display(stringc(f"    Evil Energy Detected: {error_msg}", 'red'))
+        
+        # Display exception information with full traceback
+        if 'exception' in result._result:
+            self._display.display(stringc("    ⚡ EXCEPTION TRACEBACK ⚡", 'bright red'))
+            exception_lines = result._result['exception'].split('\n')
+            for line in exception_lines:
+                self._display.display(stringc(f"    {line}", 'red'))
+        
+        # Display stderr if present
+        if 'stderr' in result._result and result._result['stderr']:
+            self._display.display(stringc("    ⚡ STDERR OUTPUT ⚡", 'yellow'))
+            stderr_lines = result._result['stderr'].split('\n')
+            for line in stderr_lines:
+                if line.strip():
+                    self._display.display(stringc(f"    {line}", 'yellow'))
+        
+        # Display stdout if present (sometimes contains error info)
+        if 'stdout' in result._result and result._result['stdout']:
+            self._display.display(stringc("    ⚡ STDOUT OUTPUT ⚡", 'cyan'))
+            stdout_lines = result._result['stdout'].split('\n')
+            for line in stdout_lines:
+                if line.strip():
+                    self._display.display(stringc(f"    {line}", 'cyan'))
+        
+        # Display module_stderr if present (for module errors)
+        if 'module_stderr' in result._result and result._result['module_stderr']:
+            self._display.display(stringc("    ⚡ MODULE ERROR ⚡", 'bright red'))
+            module_stderr_lines = result._result['module_stderr'].split('\n')
+            for line in module_stderr_lines:
+                if line.strip():
+                    self._display.display(stringc(f"    {line}", 'bright red'))
 
     def v2_runner_on_skipped(self, result):
         """Called when a task is skipped"""

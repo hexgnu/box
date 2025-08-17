@@ -1,11 +1,11 @@
 ---
 # ╔════════════════════════════════════════════════════════════════════════════╗
-# ║                    ⚡️✨ SAILOR JUPITER SYSTEM CONFIG ✨⚡️                    ║
-# ║                                                                              ║
-# ║                         Protected by Jupiter                                 ║
-# ║                      Guardian of Thunder & Courage                           ║
-# ║                                                                              ║
-# ║                          木野 まこと (Makoto Kino)                              ║
+# ║                    ⚡️✨ SAILOR JUPITER SYSTEM CONFIG ✨⚡️                  ║
+# ║                                                                            ║
+# ║                         Protected by Jupiter                               ║
+# ║                      Guardian of Thunder & Courage                         ║
+# ║                                                                            ║
+# ║                          木野 まこと (Makoto Kino)                         ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
 - hosts: all
@@ -29,7 +29,7 @@
         echo ""
         echo "              'Jupiter Star Power, Make Up!'"
         echo ""
-        python3 /home/hexgnu/git/personal/box/sailor_jupiter_banner.py 2>/dev/null || true
+        python3 {{ playbook_dir }}/sailor_jupiter_banner.py 2>/dev/null || true
         echo ""
         echo "        System configuration transformation beginning..."
         echo ""
@@ -38,7 +38,7 @@
       tags: always
 
   roles:
-    - keys              # SSH/GPG key management (run first)
+    - keys
     # - i3blocks
     - flatpak
     - st

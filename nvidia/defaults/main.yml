@@ -18,9 +18,6 @@ nvidia_driver_packages:
 # CUDA packages
 nvidia_cuda_packages:
   - xorg-x11-drv-nvidia-cuda-libs
-  - nvidia-driver-cuda
-  - cuda-toolkit
-  - nvidia-driver-NVML
   - nvidia-driver-devel
 
 # Verify installation

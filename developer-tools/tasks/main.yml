@@ -2,12 +2,6 @@
 # Developer Tools Installation Role
 
 # GitHub CLI
-- name: Add GitHub CLI repository from official repo file
-  get_url:
-    url: https://cli.github.com/packages/rpm/gh-cli.repo
-    dest: /etc/yum.repos.d/gh-cli.repo
-    mode: '0644'
-
 - name: Install GitHub CLI
   dnf:
     name: gh
@@ -83,43 +77,3 @@
     dest: /usr/local/bin/hadolint
     mode: '0755'
   when: not hadolint_installed.stat.exists
-
-# Additional useful Rust tools (optional)
-- name: Check which Rust tools are already installed
-  stat:
-    path: "/home/{{ username }}/.cargo/bin/{{ item }}"
-  register: rust_tools_check
-  become: yes
-  become_user: "{{ username }}"
-  loop:
-    - ripgrep
-    - fd-find
-    - bat
-    - exa
-    - tokei
-  tags: [rust_tools]
-
-- name: Install common Rust development tools via cargo
-  become: yes
-  become_user: "{{ username }}"
-  command: "cargo install {{ item.item }}"
-  loop: "{{ rust_tools_check.results }}"
-  when: not item.stat.exists
-  register: cargo_install_results
-  failed_when: false
-  loop_control:
-    label: "{{ item.item }}"
-  tags: [rust_tools]
-
-# Set up Rust environment for user
-- name: Ensure Rust environment is configured for user
-  blockinfile:
-    path: "/home/{{ username }}/.bashrc"
-    create: yes
-    block: |
-      # Rust environment
-      export PATH="$HOME/.cargo/bin:$PATH"
-      export RUST_BACKTRACE=1
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - RUST"
-  become: yes
-  become_user: "{{ username }}"

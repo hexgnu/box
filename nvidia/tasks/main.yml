@@ -71,29 +71,29 @@
   when: nvidia_install_cuda | default(true)
   tags: [nvidia, cuda]
 
-- name: Install CUDA development tools
-  dnf:
-    state: present
-    name: "{{ nvidia_cuda_dev_packages }}"
-  register: cuda_dev
-  retries: 3
-  delay: 10
-  until: cuda_dev is succeeded
-  when: nvidia_install_cuda | default(true)
-  tags: [nvidia, cuda, development]
-
-- name: Set up CUDA environment variables
-  blockinfile:
-    path: /etc/profile.d/cuda.sh
-    create: yes
-    mode: '0644'
-    block: |
-      export PATH=/usr/local/cuda/bin:$PATH
-      export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-      export CUDA_HOME=/usr/local/cuda
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - CUDA"
-  when: nvidia_install_cuda | default(true)
-  tags: [nvidia, cuda, environment]
+    # - name: Install CUDA development tools
+    #   dnf:
+    #     state: present
+    #     name: "{{ nvidia_cuda_dev_packages }}"
+    #   register: cuda_dev
+    #   retries: 3
+    #   delay: 10
+    #   until: cuda_dev is succeeded
+    #   when: nvidia_install_cuda | default(true)
+    #   tags: [nvidia, cuda, development]
+    # 
+    # - name: Set up CUDA environment variables
+    #   blockinfile:
+    #     path: /etc/profile.d/cuda.sh
+    #     create: yes
+    #     mode: '0644'
+    #     block: |
+    #       export PATH=/usr/local/cuda/bin:$PATH
+    #       export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+    #       export CUDA_HOME=/usr/local/cuda
+    #     marker: "# {mark} ANSIBLE MANAGED BLOCK - CUDA"
+    #   when: nvidia_install_cuda | default(true)
+    #   tags: [nvidia, cuda, environment]
 
 - name: Ensure nvidia kernel module is loaded
   modprobe:
