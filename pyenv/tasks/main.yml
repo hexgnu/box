@@ -1,0 +1,115 @@
+---
+# Pyenv installation for Python version management
+
+- name: Install pyenv dependencies
+  dnf:
+    state: latest
+    name:
+      - make
+      - gcc
+      - gcc-c++
+      - zlib-devel
+      - bzip2
+      - bzip2-devel
+      - readline-devel
+      - sqlite
+      - sqlite-devel
+      - openssl-devel
+      - tk-devel
+      - libffi-devel
+      - xz-devel
+      - python3-tkinter
+      - findutils
+      - git
+
+- name: Clone pyenv repository for user
+  become: yes
+  become_user: "{{ username }}"
+  git:
+    repo: https://github.com/pyenv/pyenv.git
+    dest: "/home/{{ username }}/.pyenv"
+    update: yes
+
+- name: Clone pyenv-virtualenv plugin
+  become: yes
+  become_user: "{{ username }}"
+  git:
+    repo: https://github.com/pyenv/pyenv-virtualenv.git
+    dest: "/home/{{ username }}/.pyenv/plugins/pyenv-virtualenv"
+    update: yes
+
+- name: Clone pyenv-update plugin
+  become: yes
+  become_user: "{{ username }}"
+  git:
+    repo: https://github.com/pyenv/pyenv-update.git
+    dest: "/home/{{ username }}/.pyenv/plugins/pyenv-update"
+    update: yes
+
+- name: Set up pyenv in user's bashrc
+  become: yes
+  become_user: "{{ username }}"
+  blockinfile:
+    path: "/home/{{ username }}/.bashrc"
+    create: yes
+    block: |
+      # Pyenv configuration
+      export PYENV_ROOT="$HOME/.pyenv"
+      export PATH="$PYENV_ROOT/bin:$PATH"
+      if command -v pyenv 1>/dev/null 2>&1; then
+        eval "$(pyenv init -)"
+        eval "$(pyenv virtualenv-init -)"
+      fi
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - PYENV"
+
+- name: Set up pyenv in user's bash_profile
+  become: yes
+  become_user: "{{ username }}"
+  blockinfile:
+    path: "/home/{{ username }}/.bash_profile"
+    create: yes
+    block: |
+      # Pyenv configuration
+      export PYENV_ROOT="$HOME/.pyenv"
+      export PATH="$PYENV_ROOT/bin:$PATH"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - PYENV"
+
+- name: Install Python 3.11 via pyenv
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    source /home/{{ username }}/.bashrc
+    pyenv install -s 3.11.9
+  args:
+    executable: /bin/bash
+    creates: "/home/{{ username }}/.pyenv/versions/3.11.9"
+
+- name: Install Python 3.12 via pyenv
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    source /home/{{ username }}/.bashrc
+    pyenv install -s 3.12.4
+  args:
+    executable: /bin/bash
+    creates: "/home/{{ username }}/.pyenv/versions/3.12.4"
+
+- name: Set global Python version to 3.12.4
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    source /home/{{ username }}/.bashrc
+    pyenv global 3.12.4
+  args:
+    executable: /bin/bash
+
+- name: Install common Python tools
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    source /home/{{ username }}/.bashrc
+    pip install --upgrade pip setuptools wheel
+    pip install pipx poetry black isort flake8 mypy pytest ipython
+  args:
+    executable: /bin/bash
+  ignore_errors: yes

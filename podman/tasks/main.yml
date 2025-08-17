@@ -1,0 +1,130 @@
+---
+# Podman installation and configuration - Simple and effective for Fedora
+
+- name: Install Podman and related tools
+  dnf:
+    state: latest
+    name:
+      - podman
+      - podman-compose
+      - podman-docker    # Provides docker command compatibility
+      - buildah          # For building container images
+      - skopeo           # For working with container registries
+      - slirp4netns      # User-mode networking for rootless containers
+      - fuse-overlayfs   # Better filesystem performance for rootless
+      - containernetworking-plugins
+      - python3-pip      # For podman-compose if needed via pip
+
+- name: Enable podman socket for user (Docker API compatibility)
+  become: yes
+  become_user: "{{ username }}"
+  systemd:
+    name: podman.socket
+    enabled: yes
+    state: started
+    scope: user
+    daemon_reload: yes
+  ignore_errors: yes
+
+- name: Configure registries for podman
+  copy:
+    dest: /etc/containers/registries.conf.d/00-shortnames.conf
+    content: |
+      [aliases]
+      # Short-name aliases for commonly used images
+      "fedora" = "registry.fedoraproject.org/fedora"
+      "ubuntu" = "docker.io/library/ubuntu"
+      "debian" = "docker.io/library/debian"
+      "alpine" = "docker.io/library/alpine"
+      "nginx" = "docker.io/library/nginx"
+      "postgres" = "docker.io/library/postgres"
+      "redis" = "docker.io/library/redis"
+      "node" = "docker.io/library/node"
+      "python" = "docker.io/library/python"
+      "mysql" = "docker.io/library/mysql"
+      "mongo" = "docker.io/library/mongo"
+    mode: '0644'
+
+- name: Ensure subuid and subgid ranges for rootless containers
+  lineinfile:
+    path: "{{ item.file }}"
+    regexp: "^{{ username }}:"
+    line: "{{ username }}:100000:65536"
+    create: yes
+  loop:
+    - { file: /etc/subuid }
+    - { file: /etc/subgid }
+
+- name: Set up Docker compatibility for user
+  become: yes
+  become_user: "{{ username }}"
+  blockinfile:
+    path: "/home/{{ username }}/.bashrc"
+    create: yes
+    block: |
+      # Podman aliases for Docker compatibility
+      alias docker='podman'
+      alias docker-compose='podman-compose'
+      
+      # Set Docker host for compatibility with tools expecting Docker
+      export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - PODMAN"
+
+- name: Create podman configuration directory for user
+  become: yes
+  become_user: "{{ username }}"
+  file:
+    path: "/home/{{ username }}/.config/containers"
+    state: directory
+    mode: '0755'
+
+- name: Configure podman storage for better performance
+  become: yes
+  become_user: "{{ username }}"
+  copy:
+    dest: "/home/{{ username }}/.config/containers/storage.conf"
+    content: |
+      [storage]
+      driver = "overlay"
+      
+      [storage.options]
+      # Enable faster overlay with metacopy
+      mount_program = "/usr/bin/fuse-overlayfs"
+      mountopt = "nodev,metacopy=on"
+    mode: '0644'
+
+- name: Enable lingering for user (keeps containers running after logout)
+  command: loginctl enable-linger {{ username }}
+  changed_when: false
+
+- name: Pull common base images for faster container creation
+  become: yes
+  become_user: "{{ username }}"
+  containers.podman.podman_image:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - docker.io/library/alpine:latest
+    - docker.io/library/ubuntu:latest
+    - registry.fedoraproject.org/fedora:latest
+  ignore_errors: yes
+  tags: [podman_images]
+
+- name: Create docker-compose wrapper script for better compatibility
+  copy:
+    dest: /usr/local/bin/docker-compose-compat
+    content: |
+      #!/bin/bash
+      # Wrapper script for docker-compose compatibility
+      exec podman-compose "$@"
+    mode: '0755'
+
+- name: Display Podman installation info
+  debug:
+    msg: |
+      Podman has been installed and configured!
+      - Use 'podman' command directly or 'docker' alias
+      - Use 'podman-compose' for docker-compose files
+      - Rootless containers are fully configured
+      - Docker socket compatibility is enabled
+      - Run 'podman info' to verify installation

@@ -5,10 +5,19 @@
 - name: enable flatpak
   command: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-- name: install ytmdesktop
-  command: flatpak install -y flathub app.ytmdesktop.ytmdesktop
+- name: install Tidal-Hifi for music streaming
+  command: flatpak install -y flathub com.mastermindzh.tidal-hifi
+  ignore_errors: yes
+
+- name: install Slack for team communication
+  command: flatpak install -y flathub com.slack.Slack
+  ignore_errors: yes
+
+# Optional applications (uncomment to enable)
 # - name: install spotify
 #   command: flatpak install -y flathub com.spotify.Client
+#   ignore_errors: yes
 
-    # - name: install zoom
-    #   command: flatpak install -y flathub us.zoom.Zoom
+# - name: install zoom
+#   command: flatpak install -y flathub us.zoom.Zoom
+#   ignore_errors: yes

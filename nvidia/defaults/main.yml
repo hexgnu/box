@@ -1,0 +1,31 @@
+---
+# NVIDIA role defaults
+
+# Enable CUDA installation
+nvidia_install_cuda: true
+
+# CUDA development packages
+nvidia_cuda_dev_packages:
+  - gcc-c++
+  - cmake
+  - python3-pycuda
+
+# Driver packages
+nvidia_driver_packages:
+  - akmod-nvidia
+  - xorg-x11-drv-nvidia-cuda
+
+# CUDA packages
+nvidia_cuda_packages:
+  - xorg-x11-drv-nvidia-cuda-libs
+  - nvidia-driver-cuda
+  - cuda-toolkit
+  - nvidia-driver-NVML
+  - nvidia-driver-devel
+
+# Verify installation
+nvidia_verify_install: true
+
+# Retry settings for package installation
+nvidia_package_retries: 3
+nvidia_package_delay: 10

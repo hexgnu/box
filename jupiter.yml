@@ -10,19 +10,19 @@
     ssh_keygen_bits: 4096
     ssh_keygen_types:
       - ed25519
-    fedora_version: 42
+    fedora_version: 39
   roles:
-    - miniconda
+    - keys              # SSH/GPG key management (run first)
     # - i3blocks
     - flatpak
     - st
     - vim
-    - rbenv
-    # - authoring
+    - pyenv
+    - nvm
+    - podman
+    - developer-tools
     - slack
     - nvidia
-    # - docker
-    # - postgres
   become_method: sudo
   become: true
   tasks:  

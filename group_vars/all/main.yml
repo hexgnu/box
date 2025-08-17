@@ -1,0 +1,85 @@
+---
+# Global variables for all hosts
+
+# System Configuration
+fedora_version: 42
+hostname: jupiter.home
+username: hexgnu
+email: matt@matthewkirk.com
+
+# SSH Configuration
+ssh_keygen_bits: 4096
+ssh_keygen_types:
+  - ed25519
+generate_rsa_key: false  # Set to true to also generate RSA keys
+
+# Python Configuration (pyenv)
+python_versions:
+  - "3.11.9"
+  - "3.12.4"
+python_global_version: "3.12.4"
+python_dev_packages:
+  - pip
+  - setuptools
+  - wheel
+  - pipx
+  - poetry
+  - black
+  - isort
+  - flake8
+  - mypy
+  - pytest
+  - ipython
+
+# Node.js Configuration (nvm)
+nvm_version: "v0.39.7"
+node_version: "lts/*"  # Latest LTS
+npm_global_packages:
+  - "@anthropic-ai/claude-code"
+  - typescript
+  - ts-node
+  - nodemon
+  - prettier
+  - eslint
+  - yarn
+  - pnpm
+
+# Rust Configuration
+rust_cargo_packages:
+  - ripgrep
+  - fd-find
+  - bat
+  - exa
+  - tokei
+
+# Podman Configuration
+podman_pull_images:
+  - docker.io/library/alpine:latest
+  - docker.io/library/ubuntu:latest
+  - registry.fedoraproject.org/fedora:latest
+enable_docker_aliases: true
+enable_lingering: true
+
+# Flatpak Applications
+flatpak_apps:
+  - com.mastermindzh.tidal-hifi
+  - com.slack.Slack
+
+# Slack Configuration
+slack_install_method: flatpak  # Options: flatpak, repo, direct
+slack_version: "4.39.95"  # Used only for direct download
+
+# Key Management
+backup_keys: true
+configure_git_signing: true
+
+# NVIDIA/CUDA Configuration
+cuda_install: true
+cuda_dev_packages:
+  - gcc-c++
+  - cmake
+  - python3-pycuda
+
+# Feature Flags
+enable_debug: false
+strict_error_handling: true

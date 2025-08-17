@@ -1,0 +1,122 @@
+---
+# Developer Tools Installation Role
+
+# GitHub CLI
+- name: Import GitHub CLI GPG key
+  rpm_key:
+    state: present
+    key: https://rpm.githubpackages.com/githubcli.gpg.key
+
+- name: Add GitHub CLI repository
+  yum_repository:
+    name: gh-cli
+    description: GitHub CLI
+    baseurl: https://rpm.githubpackages.com/rpm
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: https://rpm.githubpackages.com/githubcli.gpg.key
+
+- name: Install GitHub CLI
+  dnf:
+    name: gh
+    state: latest
+
+# Azure CLI
+- name: Import Microsoft GPG key
+  rpm_key:
+    state: present
+    key: https://packages.microsoft.com/keys/microsoft.asc
+
+- name: Add Azure CLI repository
+  yum_repository:
+    name: azure-cli
+    description: Azure CLI
+    baseurl: https://packages.microsoft.com/yumrepos/azure-cli
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: https://packages.microsoft.com/keys/microsoft.asc
+
+- name: Install Azure CLI
+  dnf:
+    name: azure-cli
+    state: latest
+
+# Google Cloud SDK
+- name: Add Google Cloud SDK repository
+  yum_repository:
+    name: google-cloud-sdk
+    description: Google Cloud SDK
+    baseurl: https://packages.cloud.google.com/yum/repos/cloud-sdk-el9-x86_64
+    enabled: yes
+    gpgcheck: yes
+    repo_gpgcheck: no
+    gpgkey:
+      - https://packages.cloud.google.com/yum/doc/yum-key.gpg
+      - https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+- name: Install Google Cloud CLI
+  dnf:
+    name: google-cloud-cli
+    state: latest
+
+# Rust and Cargo
+- name: Install Rust and Cargo
+  dnf:
+    name:
+      - rust
+      - cargo
+      - rust-src
+      - rust-std-static
+      - rust-analyzer
+    state: latest
+
+# Development Tools from standard repos
+- name: Install development tools from repos
+  dnf:
+    name:
+      - GraphicsMagick
+      - GraphicsMagick-devel
+      - httpie
+    state: latest
+
+# Hadolint - Docker/Containerfile linter
+- name: Check if hadolint is installed
+  stat:
+    path: /usr/local/bin/hadolint
+  register: hadolint_installed
+
+- name: Download hadolint binary
+  get_url:
+    url: https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64
+    dest: /usr/local/bin/hadolint
+    mode: '0755'
+  when: not hadolint_installed.stat.exists
+
+# Additional useful Rust tools (optional)
+- name: Install common Rust development tools via cargo
+  become: yes
+  become_user: "{{ username }}"
+  command: "cargo install {{ item }}"
+  args:
+    creates: "/home/{{ username }}/.cargo/bin/{{ item }}"
+  loop:
+    - ripgrep
+    - fd-find
+    - bat
+    - exa
+    - tokei
+  ignore_errors: yes
+  tags: [rust_tools]
+
+# Set up Rust environment for user
+- name: Ensure Rust environment is configured for user
+  blockinfile:
+    path: "/home/{{ username }}/.bashrc"
+    create: yes
+    block: |
+      # Rust environment
+      export PATH="$HOME/.cargo/bin:$PATH"
+      export RUST_BACKTRACE=1
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - RUST"
+  become: yes
+  become_user: "{{ username }}"

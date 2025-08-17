@@ -1,0 +1,36 @@
+---
+# Developer Tools role defaults
+
+# Package state (present = stable, latest = always update)
+dev_tools_package_state: present
+cli_tools_package_state: latest  # CLI tools benefit from updates
+
+# GitHub CLI
+github_cli_enabled: true
+
+# Azure CLI
+azure_cli_enabled: true
+
+# Google Cloud CLI
+gcloud_cli_enabled: true
+
+# Rust packages to install via cargo
+rust_cargo_packages:
+  - ripgrep
+  - fd-find
+  - bat
+  - exa
+  - tokei
+
+# Standard repo packages
+dev_standard_packages:
+  - GraphicsMagick
+  - GraphicsMagick-devel
+  - httpie
+
+# Hadolint version (for downloading)
+hadolint_version: latest
+
+# Retry settings
+dev_tools_retries: 3
+dev_tools_delay: 5

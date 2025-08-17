@@ -1,0 +1,268 @@
+---
+# SSH and GPG Key Management
+# Philosophy: Generate new keys if missing, preserve existing ones, always backup
+
+# Ensure facts are gathered
+- name: Gather facts if not already gathered
+  setup:
+  when: ansible_date_time is not defined
+
+# SSH Key Management
+- name: Check for existing SSH keys
+  stat:
+    path: "/home/{{ username }}/.ssh/{{ item }}"
+  register: ssh_key_check
+  become: yes
+  become_user: "{{ username }}"
+  loop:
+    - id_ed25519
+    - id_rsa
+
+- name: Create .ssh directory if it doesn't exist
+  file:
+    path: "/home/{{ username }}/.ssh"
+    state: directory
+    mode: '0700'
+    owner: "{{ username }}"
+    group: "{{ username }}"
+
+- name: Generate ED25519 SSH key if none exists
+  openssh_keypair:
+    path: "/home/{{ username }}/.ssh/id_ed25519"
+    type: ed25519
+    comment: "{{ username }}@{{ hostname }}"
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: '0600'
+  become: yes
+  become_user: "{{ username }}"
+  when: not (ssh_key_check.results[0].stat.exists or ssh_key_check.results[1].stat.exists)
+
+- name: Generate RSA SSH key if it doesn't exist (for compatibility)
+  openssh_keypair:
+    path: "/home/{{ username }}/.ssh/id_rsa"
+    type: rsa
+    size: 4096
+    comment: "{{ username }}@{{ hostname }}"
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: '0600'
+  become: yes
+  become_user: "{{ username }}"
+  when: not ssh_key_check.results[1].stat.exists
+
+- name: Check which SSH key files exist
+  stat:
+    path: "/home/{{ username }}/.ssh/{{ item }}"
+  register: ssh_key_files
+  loop:
+    - id_ed25519
+    - id_ed25519.pub
+    - id_rsa
+    - id_rsa.pub
+
+- name: Set proper permissions on existing SSH keys
+  file:
+    path: "{{ item.stat.path }}"
+    mode: '0600'
+    owner: "{{ username }}"
+    group: "{{ username }}"
+  loop: "{{ ssh_key_files.results }}"
+  when: item.stat.exists
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Create SSH config file
+  copy:
+    dest: "/home/{{ username }}/.ssh/config"
+    content: |
+      # Default SSH configuration
+      Host *
+        AddKeysToAgent yes
+        IdentityFile ~/.ssh/id_ed25519
+        IdentityFile ~/.ssh/id_rsa
+        ServerAliveInterval 60
+        ServerAliveCountMax 3
+      
+      # GitHub
+      Host github.com
+        HostName github.com
+        User git
+        IdentityFile ~/.ssh/id_ed25519
+      
+      # GitLab
+      Host gitlab.com
+        HostName gitlab.com
+        User git
+        IdentityFile ~/.ssh/id_ed25519
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: '0644'
+  when: not (lookup('file', '/home/' + username + '/.ssh/config', errors='ignore'))
+
+# GPG Key Management
+- name: Check for existing GPG keys
+  shell: gpg --list-secret-keys --keyid-format=long | grep -E "^sec"
+  register: gpg_key_check
+  become: yes
+  become_user: "{{ username }}"
+  failed_when: false
+  changed_when: false
+
+- name: Create GPG home directory
+  file:
+    path: "/home/{{ username }}/.gnupg"
+    state: directory
+    mode: '0700'
+    owner: "{{ username }}"
+    group: "{{ username }}"
+
+- name: Configure GPG agent
+  copy:
+    dest: "/home/{{ username }}/.gnupg/gpg-agent.conf"
+    content: |
+      default-cache-ttl 600
+      max-cache-ttl 7200
+      pinentry-program /usr/bin/pinentry-gtk-2
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: '0600'
+
+- name: Generate GPG key if none exists
+  block:
+    - name: Create GPG key generation script
+      copy:
+        dest: /tmp/gpg-keygen-script
+        content: |
+          %echo Generating GPG key
+          Key-Type: RSA
+          Key-Length: 4096
+          Subkey-Type: RSA
+          Subkey-Length: 4096
+          Name-Real: {{ username }}
+          Name-Email: {{ email }}
+          Expire-Date: 2y
+          %no-protection
+          %commit
+          %echo done
+        mode: '0600'
+        owner: "{{ username }}"
+      when: gpg_key_check.rc != 0
+
+    - name: Generate GPG key
+      command: gpg --batch --generate-key /tmp/gpg-keygen-script
+      become: yes
+      become_user: "{{ username }}"
+      when: gpg_key_check.rc != 0
+
+    - name: Clean up GPG generation script
+      file:
+        path: /tmp/gpg-keygen-script
+        state: absent
+      when: gpg_key_check.rc != 0
+
+- name: Configure Git to use GPG signing
+  git_config:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    scope: global
+  become: yes
+  become_user: "{{ username }}"
+  loop:
+    - { name: "user.name", value: "{{ username }}" }
+    - { name: "user.email", value: "{{ email }}" }
+    - { name: "commit.gpgsign", value: "true" }
+  when: configure_git_signing | default(true)
+
+# Backup existing keys
+- name: Create backup directory for keys
+  file:
+    path: "/home/{{ username }}/key-backups/{{ ansible_date_time.date | default(lookup('pipe', 'date +%Y-%m-%d')) }}"
+    state: directory
+    mode: '0700'
+    owner: "{{ username }}"
+    group: "{{ username }}"
+  when: backup_keys | default(true)
+
+- name: Backup SSH keys
+  archive:
+    path: "/home/{{ username }}/.ssh/"
+    dest: "/home/{{ username }}/key-backups/{{ ansible_date_time.date | default(lookup('pipe', 'date +%Y-%m-%d')) }}/ssh-keys.tar.gz"
+    format: gz
+    mode: '0600'
+    owner: "{{ username }}"
+    group: "{{ username }}"
+  become: yes
+  become_user: "{{ username }}"
+  when: 
+    - backup_keys | default(true)
+    - ssh_key_check.results[0].stat.exists or ssh_key_check.results[1].stat.exists
+  ignore_errors: yes
+
+- name: Export and backup GPG keys
+  block:
+    - name: Export GPG public keys
+      shell: gpg --armor --export > "/home/{{ username }}/key-backups/{{ ansible_date_time.date | default(lookup('pipe', 'date +%Y-%m-%d')) }}/gpg-public.asc"
+      become: yes
+      become_user: "{{ username }}"
+      when: gpg_key_check.rc == 0
+
+    - name: Export GPG private keys
+      shell: gpg --armor --export-secret-keys > "/home/{{ username }}/key-backups/{{ ansible_date_time.date | default(lookup('pipe', 'date +%Y-%m-%d')) }}/gpg-private.asc"
+      become: yes
+      become_user: "{{ username }}"
+      when: gpg_key_check.rc == 0
+
+    - name: Export GPG trust database
+      shell: gpg --export-ownertrust > "/home/{{ username }}/key-backups/{{ ansible_date_time.date | default(lookup('pipe', 'date +%Y-%m-%d')) }}/gpg-trust.txt"
+      become: yes
+      become_user: "{{ username }}"
+      when: gpg_key_check.rc == 0
+  when: backup_keys | default(true)
+  ignore_errors: yes
+
+# Display key information
+- name: Get SSH public key fingerprints
+  shell: ssh-keygen -lf "/home/{{ username }}/.ssh/{{ item }}.pub"
+  register: ssh_fingerprints
+  become: yes
+  become_user: "{{ username }}"
+  loop:
+    - id_ed25519
+    - id_rsa
+  ignore_errors: yes
+  changed_when: false
+
+- name: Display SSH key information
+  debug:
+    msg: |
+      SSH Keys Status:
+      {% for result in ssh_fingerprints.results %}
+      {% if result.rc == 0 %}
+      - {{ result.item }}: {{ result.stdout }}
+      {% endif %}
+      {% endfor %}
+      
+      To add to GitHub/GitLab:
+      cat ~/.ssh/id_ed25519.pub
+
+- name: Get GPG key ID
+  shell: gpg --list-secret-keys --keyid-format=long | grep -E "^sec" | head -1 | awk '{print $2}' | cut -d'/' -f2
+  register: gpg_key_id
+  become: yes
+  become_user: "{{ username }}"
+  failed_when: false
+  changed_when: false
+
+- name: Display GPG key information
+  debug:
+    msg: |
+      GPG Key Status:
+      {% if gpg_key_id.rc == 0 and gpg_key_id.stdout %}
+      - Key ID: {{ gpg_key_id.stdout }}
+      - To configure Git: git config --global user.signingkey {{ gpg_key_id.stdout }}
+      - To export public key: gpg --armor --export {{ gpg_key_id.stdout }}
+      {% else %}
+      - No GPG key found or generated
+      {% endif %}
+  when: gpg_key_id is defined

@@ -1,0 +1,12 @@
+---
+# NVIDIA role handlers
+
+- name: rebuild_nvidia_modules
+  command: akmods --force
+  become: yes
+  notify: wait_for_nvidia_modules
+
+- name: wait_for_nvidia_modules
+  wait_for:
+    timeout: 120
+  delegate_to: localhost

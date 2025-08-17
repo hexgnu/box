@@ -1,0 +1,98 @@
+---
+# NVM (Node Version Manager) installation and Claude Code setup
+
+- name: Install nvm dependencies
+  dnf:
+    state: latest
+    name:
+      - curl
+      - git
+      - make
+      - gcc
+      - gcc-c++
+
+- name: Download and install nvm
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  args:
+    creates: "/home/{{ username }}/.nvm/nvm.sh"
+    executable: /bin/bash
+
+- name: Set up nvm in user's bashrc
+  become: yes
+  become_user: "{{ username }}"
+  blockinfile:
+    path: "/home/{{ username }}/.bashrc"
+    create: yes
+    block: |
+      # NVM configuration
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+      [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - NVM"
+
+- name: Install Node.js LTS via nvm
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm install --lts
+    nvm use --lts
+    nvm alias default lts/*
+  args:
+    executable: /bin/bash
+    creates: "/home/{{ username }}/.nvm/versions/node"
+
+- name: Install @anthropic-ai/claude-code globally
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    npm install -g @anthropic-ai/claude-code
+  args:
+    executable: /bin/bash
+  register: claude_install
+  changed_when: "'added' in claude_install.stdout or 'updated' in claude_install.stdout"
+
+- name: Install other useful global npm packages
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    npm install -g {{ item }}
+  args:
+    executable: /bin/bash
+  loop:
+    - typescript
+    - ts-node
+    - nodemon
+    - prettier
+    - eslint
+    - yarn
+    - pnpm
+  ignore_errors: yes
+  register: npm_install
+  changed_when: "'added' in npm_install.stdout or 'updated' in npm_install.stdout"
+
+- name: Verify Claude Code installation
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    which claude-code && claude-code --version
+  args:
+    executable: /bin/bash
+  register: claude_verify
+  changed_when: false
+  ignore_errors: yes
+
+- name: Display Claude Code installation status
+  debug:
+    msg: "Claude Code installed: {{ claude_verify.stdout }}"
+  when: claude_verify.rc == 0

@@ -1,12 +1,72 @@
 ---
-- name: Download slack file
-  command: 'wget "https://downloads.slack-edge.com/desktop-releases/linux/x64/4.37.94/slack-4.37.94-0.1.el8.x86_64.rpm" -o /opt/slack.rpm'
-  args:
-      chdir: /opt
-      creates: /opt/slack-4.37.94-0.1.el8.x86_64.rpm
+# Slack installation - More maintainable approach
 
-- name: Rpm install slack file
-  yum: 
-    name: /opt/slack-4.37.94-0.1.el8.x86_64.rpm
+# Option 1: Use Flatpak (RECOMMENDED - auto-updates, sandboxed)
+- name: Install Slack via Flatpak
+  command: flatpak install -y flathub com.slack.Slack
+  ignore_errors: yes
+  tags: [slack_flatpak]
+
+# Option 2: Official Slack repository method (if Flatpak not preferred)
+- name: Add Slack repository
+  yum_repository:
+    name: slack
+    description: Slack Official Repository
+    baseurl: https://packagecloud.io/slacktechnologies/slack/fedora/21/x86_64
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: https://packagecloud.io/slacktechnologies/slack/gpgkey
+    sslverify: yes
+    sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+  when: slack_use_repo | default(false)
+  tags: [slack_repo]
+
+- name: Install Slack from repository
+  dnf:
+    name: slack
+    state: latest
+  when: slack_use_repo | default(false)
+  tags: [slack_repo]
+
+# Option 3: Direct download (fallback - less ideal but works)
+- name: Check if Slack needs to be installed
+  command: rpm -q slack
+  register: slack_check
+  failed_when: false
+  changed_when: false
+  when: slack_direct_download | default(false)
+  tags: [slack_direct]
+
+- name: Download latest Slack RPM
+  get_url:
+    url: https://downloads.slack-edge.com/releases/linux/{{ slack_version | default('4.39.95') }}/prod/x64/slack-{{ slack_version | default('4.39.95') }}-0.1.el8.x86_64.rpm
+    dest: /tmp/slack-latest.rpm
+    mode: '0644'
+  when: 
+    - slack_direct_download | default(false)
+    - slack_check.rc != 0
+  tags: [slack_direct]
+
+- name: Install Slack RPM
+  dnf:
+    name: /tmp/slack-latest.rpm
     state: present
-    disable_gpg_check: true
+    disable_gpg_check: yes
+  when: 
+    - slack_direct_download | default(false)
+    - slack_check.rc != 0
+  tags: [slack_direct]
+
+- name: Clean up downloaded RPM
+  file:
+    path: /tmp/slack-latest.rpm
+    state: absent
+  when: slack_direct_download | default(false)
+  tags: [slack_direct]
+
+# Desktop integration
+- name: Ensure Slack desktop file has proper permissions
+  file:
+    path: /usr/share/applications/slack.desktop
+    mode: '0644'
+  ignore_errors: yes

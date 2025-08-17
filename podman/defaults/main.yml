@@ -1,0 +1,37 @@
+---
+# Podman role defaults
+
+# Package installation
+podman_package_state: present
+podman_packages:
+  - podman
+  - podman-compose
+  - podman-docker
+  - buildah
+  - skopeo
+  - slirp4netns
+  - fuse-overlayfs
+  - containernetworking-plugins
+
+# Docker compatibility
+podman_enable_docker_alias: true
+podman_enable_docker_socket: true
+
+# User configuration
+podman_enable_lingering: true
+podman_configure_storage: true
+
+# Pre-pull images for faster container creation
+podman_pull_base_images: true
+podman_base_images:
+  - docker.io/library/alpine:latest
+  - docker.io/library/ubuntu:latest
+  - registry.fedoraproject.org/fedora:latest
+
+# Subuid/subgid configuration
+podman_subuid_start: 100000
+podman_subuid_count: 65536
+
+# Retry settings
+podman_retries: 3
+podman_delay: 5

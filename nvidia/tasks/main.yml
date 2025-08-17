@@ -1,7 +1,10 @@
 ---
-- name: install preconditions
+# NVIDIA Driver and CUDA Installation
+# Tags: nvidia, drivers, cuda
+
+- name: Install NVIDIA driver prerequisites
   dnf:
-    state: latest
+    state: present
     name:
       - kernel-devel
       - kernel-headers
@@ -13,44 +16,71 @@
       - libglvnd-opengl
       - libglvnd-devel
       - pkgconfig
-- name: enable rpm fusion
+  register: nvidia_prereq
+  retries: "{{ nvidia_package_retries | default(3) }}"
+  delay: "{{ nvidia_package_delay | default(10) }}"
+  until: nvidia_prereq is succeeded
+  tags: [nvidia, drivers, prerequisites]
+
+- name: Enable RPM Fusion free repository
   dnf:
     name: "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ fedora_version | default(42) }}.noarch.rpm"
     state: present
+    disable_gpg_check: yes
+  register: rpmfusion_free
+  retries: 3
+  delay: 5
+  until: rpmfusion_free is succeeded
+  tags: [nvidia, repos, rpmfusion]
 
-- name: enable rpm fusion nonfree
+- name: Enable RPM Fusion nonfree repository
   dnf:
     name: "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ fedora_version | default(42) }}.noarch.rpm"
     state: present
+    disable_gpg_check: yes
+  register: rpmfusion_nonfree
+  retries: 3
+  delay: 5
+  until: rpmfusion_nonfree is succeeded
+  tags: [nvidia, repos, rpmfusion]
 
-- name: makecache
+- name: Update repository cache
   command: dnf makecache
+  changed_when: false
+  tags: [nvidia, repos, cache]
 
-- name: install nvidia drivers
+- name: Install NVIDIA drivers
   dnf:
-    state: latest
-    name:
-      - akmod-nvidia
-      - xorg-x11-drv-nvidia-cuda
+    state: present
+    name: "{{ nvidia_driver_packages | default(['akmod-nvidia', 'xorg-x11-drv-nvidia-cuda']) }}"
+  register: nvidia_drivers
+  retries: 3
+  delay: 10
+  until: nvidia_drivers is succeeded
+  notify: rebuild_nvidia_modules
+  tags: [nvidia, drivers]
 
-- name: Install CUDA packages from RPMFusion
+- name: Install CUDA packages
   dnf:
-    state: latest
-    name:
-      - xorg-x11-drv-nvidia-cuda-libs
-      - nvidia-driver-cuda
-      - cuda-toolkit
-      - nvidia-driver-NVML
-      - nvidia-driver-devel
+    state: present
+    name: "{{ nvidia_cuda_packages }}"
+  register: cuda_packages
+  retries: 3
+  delay: 10
+  until: cuda_packages is succeeded
+  when: nvidia_install_cuda | default(true)
+  tags: [nvidia, cuda]
 
-- name: Install additional CUDA development tools
+- name: Install CUDA development tools
   dnf:
-    state: latest
-    name:
-      - gcc-c++
-      - cmake
-      - python3-pycuda
-  tags: cuda_dev
+    state: present
+    name: "{{ nvidia_cuda_dev_packages }}"
+  register: cuda_dev
+  retries: 3
+  delay: 10
+  until: cuda_dev is succeeded
+  when: nvidia_install_cuda | default(true)
+  tags: [nvidia, cuda, development]
 
 - name: Set up CUDA environment variables
   blockinfile:
@@ -61,19 +91,31 @@
       export PATH=/usr/local/cuda/bin:$PATH
       export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
       export CUDA_HOME=/usr/local/cuda
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - CUDA"
+  when: nvidia_install_cuda | default(true)
+  tags: [nvidia, cuda, environment]
+
 - name: Ensure nvidia kernel module is loaded
   modprobe:
     name: nvidia
     state: present
-  ignore_errors: yes
+  register: nvidia_module
+  failed_when: false
+  tags: [nvidia, drivers, kernel]
 
-- name: Check nvidia-smi is working
+- name: Check nvidia-smi functionality
   command: nvidia-smi
   register: nvidia_smi_result
-  ignore_errors: yes
   changed_when: false
+  failed_when: false
+  when: nvidia_verify_install | default(true)
+  tags: [nvidia, verify]
 
-- name: Display nvidia-smi output
+- name: Display NVIDIA installation status
   debug:
-    var: nvidia_smi_result.stdout_lines
-  when: nvidia_smi_result.rc == 0
+    msg: |
+      NVIDIA Driver Status: {{ 'Installed' if nvidia_drivers is succeeded else 'Failed' }}
+      CUDA Status: {{ 'Installed' if cuda_packages is succeeded else 'Not installed/Failed' }}
+      nvidia-smi: {{ 'Working' if nvidia_smi_result.rc == 0 else 'Not working - may need reboot' }}
+  when: nvidia_verify_install | default(true)
+  tags: [nvidia, verify, status]

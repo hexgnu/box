@@ -1,0 +1,108 @@
+---
+# Master Playbook - Can run all or specific roles via tags
+# 
+# Examples:
+#   ansible-playbook site.yml --tags "nvidia"         # Just NVIDIA
+#   ansible-playbook site.yml --tags "development"    # Dev tools only
+#   ansible-playbook site.yml --tags "containers"     # Just Podman
+#   ansible-playbook site.yml --skip-tags "slow"      # Skip slow tasks
+
+- name: Fedora Workstation Configuration
+  hosts: all
+  user: root
+  gather_facts: yes
+  become: yes
+  become_method: sudo
+  
+  pre_tasks:
+    - name: Ensure system is up to date
+      dnf:
+        name: "*"
+        state: latest
+      when: system_update | default(false)
+      tags: [always, update]
+    
+    - name: Gather package facts
+      package_facts:
+        manager: rpm
+      tags: [always]
+  
+  roles:
+    # Security and Keys (run first)
+    - role: keys
+      tags: [keys, security, initial]
+      when: keys_enabled | default(true)
+    
+    # Development environments
+    - role: pyenv
+      tags: [pyenv, python, development, languages]
+      when: pyenv_enabled | default(true)
+    
+    - role: nvm
+      tags: [nvm, node, nodejs, development, languages]
+      when: nvm_enabled | default(true)
+    
+    - role: miniconda
+      tags: [conda, python, data-science, development]
+      when: miniconda_enabled | default(true)
+    
+    # Development tools
+    - role: developer-tools
+      tags: [tools, development, cli]
+      when: dev_tools_enabled | default(true)
+    
+    # Container runtime
+    - role: podman
+      tags: [podman, containers, docker]
+      when: podman_enabled | default(true)
+    
+    # Desktop applications
+    - role: flatpak
+      tags: [flatpak, desktop, applications]
+      when: flatpak_enabled | default(true)
+    
+    - role: slack
+      tags: [slack, communication, desktop]
+      when: slack_enabled | default(true)
+    
+    # Terminal and editor
+    - role: vim
+      tags: [vim, editor, development]
+      when: vim_enabled | default(true)
+    
+    - role: st
+      tags: [st, terminal, desktop]
+      when: st_enabled | default(true)
+    
+    # Hardware
+    - role: nvidia
+      tags: [nvidia, drivers, cuda, gpu, slow]
+      when: nvidia_enabled | default(true)
+  
+  post_tasks:
+    - name: Display completion message
+      debug:
+        msg: |
+          ========================================
+          Fedora Workstation Configuration Complete!
+          ========================================
+          
+          Next steps:
+          1. Reboot if NVIDIA drivers were installed
+          2. Log out/in for shell changes to take effect
+          3. Run 'podman info' to verify container setup
+          4. Check GPG/SSH keys with 'gpg --list-keys' and 'ssh-add -l'
+          
+          Run specific components:
+            ansible-playbook site.yml --tags "nvidia"
+            ansible-playbook site.yml --tags "development"
+            ansible-playbook site.yml --list-tags  # See all available tags
+      tags: [always]
+    
+    - name: Create summary report
+      template:
+        src: templates/summary.j2
+        dest: "~/setup-summary-{{ ansible_date_time.date }}.txt"
+        mode: '0644'
+      when: create_summary | default(true)
+      tags: [always, report]
