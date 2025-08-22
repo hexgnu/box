@@ -1,0 +1,33 @@
+---
+- name: Remove old/broken Brave repository configurations
+  become: true
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /etc/yum.repos.d/brave-browser.repo
+    - /etc/yum.repos.d/brave.repo
+    - /etc/yum.repos.d/brave-browser-rpm-release.repo
+
+- name: Import Brave GPG key
+  become: true
+  rpm_key:
+    state: present
+    key: https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+
+- name: Add Brave browser repository
+  become: true
+  yum_repository:
+    name: brave-browser-rpm-release
+    description: Brave Browser RPM Release
+    baseurl: https://brave-browser-rpm-release.s3.brave.com/$basearch
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+
+- name: Install Brave browser
+  become: true
+  dnf:
+    name: brave-browser
+    state: present
+    update_cache: yes

@@ -1,21 +1,51 @@
 ---
-- name: Install libraries with dnf
+- name: Install Zoom dependencies
+  become: true
   dnf:
-    name: ['glibc', 'glib2', 'libX11', 'libXfixes', 'libGL', 'sqlite', 'libXrender', 'libXcomposite', 'qt-x11', 'libxslt', 'pulseaudio-libs', 'alsa-lib', 'gstreamer-plugins-base',
-'mesa-dri-drivers']
+    name: 
+      - glibc
+      - glib2
+      - libX11
+      - libXfixes
+      - libGL
+      - sqlite
+      - libXrender
+      - libXcomposite
+      - libxslt
+      - pulseaudio-libs
+      - alsa-lib
+      - gstreamer1-plugins-base
+      - mesa-dri-drivers
+      - libxkbcommon-x11
+      - xcb-util-keysyms
+      - xcb-util-image
+      - xcb-util-renderutil
+      - xcb-util-wm
     state: present
   tags: [system]
 
-- name: Import zoom signing key
+- name: Import Zoom GPG signing key
+  become: true
   rpm_key:
-          state: present
-          key: https://zoom.us/linux/download/pubkey
+    state: present
+    key: https://zoom.us/linux/download/pubkey?version=5-12-6
 
-
-- name: Download zoom rpm
+- name: Download Zoom RPM package
+  become: true
   get_url:
-      url: https://zoom.us/client/latest/zoom_x86_64.rpm
-      dest: /opt/zoom_x86_64.rpm
+    url: https://zoom.us/client/latest/zoom_x86_64.rpm
+    dest: /tmp/zoom_x86_64.rpm
+    mode: '0644'
 
-- name: Install zoom
-  yum: name=/opt/zoom_x86_64.rpm state=present
+- name: Install Zoom from RPM
+  become: true
+  dnf:
+    name: /tmp/zoom_x86_64.rpm
+    state: present
+    disable_gpg_check: yes
+
+- name: Clean up downloaded RPM
+  become: true
+  file:
+    path: /tmp/zoom_x86_64.rpm
+    state: absent

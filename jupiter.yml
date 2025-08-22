@@ -19,7 +19,7 @@
     ssh_keygen_bits: 4096
     ssh_keygen_types:
       - ed25519
-    fedora_version: 39
+    fedora_version: 42
   
   pre_tasks:
     - name: "⚡ Sailor Jupiter Power Make Up! ⚡"
@@ -38,16 +38,22 @@
       tags: always
 
   roles:
+    - setup
     - keys
-    # - i3blocks
+    - dotfiles  # Deploy dotfiles before other roles that depend on them
+    - i3
+    - i3blocks
     - flatpak
+    - brave
     - st
     - vim
     - pyenv
     - nvm
     - podman
     - developer-tools
+    - direnv
     - slack
+    - zoom
     - nvidia
   become_method: sudo
   become: true

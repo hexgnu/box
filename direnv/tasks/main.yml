@@ -1,16 +1,6 @@
 ---
-- name: Direnv dependencies
+- name: Install direnv
+  become: true
   dnf:
-    name: golang
+    name: direnv
     state: present
-
-- name: Checkout direnv
-  git:
-    update: no
-    repo: https://github.com/direnv/direnv.git
-    dest: /opt/direnv
-
-- name: Build direnv
-  command: make install
-  args:
-    chdir: /opt/direnv

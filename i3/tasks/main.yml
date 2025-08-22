@@ -1,6 +1,19 @@
 ---
-- name: install deps
-  dnf: name=picom state=latest
+- name: install i3 window manager and dependencies
+  dnf:
+    name:
+      - i3
+      - i3status
+      - i3lock
+      - picom
+      - rofi
+      - feh
+      - xbacklight
+      - dunst
+      - arandr
+      - xorg-x11-server-Xorg
+      - xorg-x11-xinit-session
+    state: latest
   tags: [i3]
 
 

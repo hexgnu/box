@@ -63,6 +63,7 @@
       - GraphicsMagick
       - GraphicsMagick-devel
       - httpie
+      - gnome-screenshot
     state: latest
 
 # Hadolint - Docker/Containerfile linter

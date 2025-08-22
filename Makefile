@@ -1,4 +1,4 @@
-.PHONY: all depends clean check nvidia dev desktop help
+.PHONY: all depends clean check nvidia dev desktop help vim
 
 # Default target
 all: check
@@ -7,7 +7,7 @@ all: check
 
 # Install dependencies
 depends:
-	sudo dnf install -y ansible make git
+	sudo dnf install -y ansible make git glibc-devel gcc
 
 # Run with specific tags
 nvidia:
@@ -18,6 +18,9 @@ dev:
 	@echo "Installing development tools..."
 	ansible-playbook -K -i hosts jupiter.yml --tags "development,languages"
 
+vim:
+	@echo "INstalling vim"
+	ansible-playbook -K -i hosts jupiter.yml --tags "vim"
 desktop:
 	@echo "Installing desktop applications..."
 	ansible-playbook -K -i hosts jupiter.yml --tags "desktop,flatpak"

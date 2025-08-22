@@ -1,42 +1,45 @@
 ---
-- name: enable copr for i3blocks
-  community.general.copr:
-    state: enabled
-    name: wyvie/i3blocks
-- name: dnf install i3blocks
+# COPR doesn't support Fedora 42 yet, so build from source
+- name: Install build dependencies for i3blocks
   dnf:
     name:
-      - i3blocks
-# - name: git clone the i3blocks repo
-#   tags: [i3blocks]
-#   git:
-#       update: false
-#       repo: https://github.com/vivien/i3blocks
-#       dest: /home/hexgnu/git/personal/i3blocks
-# - name: Install dependencies
-#   dnf:
-#       name:
-#           - autoconf
-#           - automake
-#       state: latest
-# 
-# - name: autogen the configure file
-#   command: ./autogen.sh
-#   args:
-#       chdir: /home/hexgnu/git/personal/i3blocks
-#       creates: /home/hexngu/git/personal/i3blocks/configure
-# 
-# - name: configure
-#   command: ./configure
-#   args:
-#       chdir: /home/hexgnu/git/personal/i3blocks
-#       creates: /home/hexgnu/git/personal/i3blocks/i3blocks-config.h
-# 
-# - name: make it
-#   make:
-#       chdir: /home/hexgnu/git/personal/i3blocks
-# 
-# - name: install it
-#   make:
-#       chdir: /home/hexgnu/git/personal/i3blocks
-#       target: install
+      - autoconf
+      - automake
+      - make
+      - gcc
+      - git
+    state: latest
+  tags: [i3blocks]
+
+- name: git clone the i3blocks repo
+  tags: [i3blocks]
+  git:
+    update: false
+    repo: https://github.com/vivien/i3blocks
+    dest: /home/{{ username }}/git/personal/i3blocks
+  become_user: "{{ username }}"
+
+- name: autogen the configure file
+  command: ./autogen.sh
+  args:
+    chdir: /home/{{ username }}/git/personal/i3blocks
+    creates: /home/{{ username }}/git/personal/i3blocks/configure
+  become_user: "{{ username }}"
+
+- name: configure
+  command: ./configure
+  args:
+    chdir: /home/{{ username }}/git/personal/i3blocks
+    creates: /home/{{ username }}/git/personal/i3blocks/i3blocks-config.h
+  become_user: "{{ username }}"
+
+- name: make it
+  make:
+    chdir: /home/{{ username }}/git/personal/i3blocks
+  become_user: "{{ username }}"
+
+- name: install it
+  make:
+    chdir: /home/{{ username }}/git/personal/i3blocks
+    target: install
+  become: true

@@ -63,20 +63,8 @@
     - { file: /etc/subuid }
     - { file: /etc/subgid }
 
-- name: Set up Docker compatibility for user
-  become: yes
-  become_user: "{{ username }}"
-  blockinfile:
-    path: "/home/{{ username }}/.bashrc"
-    create: yes
-    block: |
-      # Podman is available alongside Docker CE
-      # Use 'podman' for rootless containers
-      # Use 'docker' for Docker CE containers
-      
-      # Optional: Set Docker host for Docker CE (uncomment if needed)
-      # export DOCKER_HOST="unix:///var/run/docker.sock"
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - PODMAN"
+# Note: podman configuration is now managed in dotfiles repo
+# The bashrc setup is handled by the dotfiles symlink
 
 - name: Create podman configuration directory for user
   become: yes

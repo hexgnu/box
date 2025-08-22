@@ -21,6 +21,7 @@
       - python3-tkinter
       - findutils
       - git
+      - tk-devel
 
 - name: Clone pyenv repository for user
   become: yes
@@ -46,40 +47,15 @@
     dest: "/home/{{ username }}/.pyenv/plugins/pyenv-update"
     update: yes
 
-- name: Set up pyenv in user's bashrc
-  become: yes
-  become_user: "{{ username }}"
-  blockinfile:
-    path: "/home/{{ username }}/.bashrc"
-    create: yes
-    block: |
-      # Pyenv configuration
-      export PYENV_ROOT="$HOME/.pyenv"
-      export PATH="$PYENV_ROOT/bin:$PATH"
-      if command -v pyenv 1>/dev/null 2>&1; then
-        eval "$(pyenv init -)"
-        eval "$(pyenv virtualenv-init -)"
-      fi
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - PYENV"
-
-- name: Set up pyenv in user's bash_profile
-  become: yes
-  become_user: "{{ username }}"
-  blockinfile:
-    path: "/home/{{ username }}/.bash_profile"
-    create: yes
-    block: |
-      # Pyenv configuration
-      export PYENV_ROOT="$HOME/.pyenv"
-      export PATH="$PYENV_ROOT/bin:$PATH"
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - PYENV"
+# Note: pyenv configuration is now managed in dotfiles repo
+# The bashrc/bash_profile setup is handled by the dotfiles symlink
 
 - name: Install Python 3.11 via pyenv
   become: yes
   become_user: "{{ username }}"
   shell: |
     source /home/{{ username }}/.bashrc
-    pyenv install -s 3.11.9
+    pyenv install 3.11
   args:
     executable: /bin/bash
     creates: "/home/{{ username }}/.pyenv/versions/3.11.9"
@@ -89,28 +65,16 @@
   become_user: "{{ username }}"
   shell: |
     source /home/{{ username }}/.bashrc
-    pyenv install -s 3.12.4
+    pyenv install -s 3.12
   args:
     executable: /bin/bash
     creates: "/home/{{ username }}/.pyenv/versions/3.12.4"
 
-- name: Set global Python version to 3.12.4
+- name: Set global Python version to 3.12
   become: yes
   become_user: "{{ username }}"
   shell: |
     source /home/{{ username }}/.bashrc
-    pyenv global 3.12.4
+    pyenv global 3.12
   args:
     executable: /bin/bash
-
-- name: Install common Python tools
-  become: yes
-  become_user: "{{ username }}"
-  shell: |
-    source /home/{{ username }}/.bashrc
-    pip install --upgrade pip setuptools wheel
-    pip install pipx poetry black isort flake8 mypy pytest ipython
-  args:
-    executable: /bin/bash
-  register: python_tools_install
-  failed_when: false

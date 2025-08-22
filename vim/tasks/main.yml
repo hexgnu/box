@@ -5,4 +5,17 @@
   git:
     update: true
     repo: https://github.com/ctrlpvim/ctrlp.vim.git
+
     dest: /home/hexgnu/.config/nvim/bundle/ctrlp.vim
+- name: install packer
+  become: true
+  become_user: hexgnu
+  git:
+    update: true
+    repo: https://github.com/wbthomason/packer.nvim
+    dest: /home/hexgnu/.local/share/nvim/site/pack/packer/start/packer.nvim
+- name: install neovim
+  dnf:
+    state: present
+    name:
+      - neovim

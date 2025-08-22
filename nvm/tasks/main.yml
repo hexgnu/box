@@ -20,18 +20,8 @@
     creates: "/home/{{ username }}/.nvm/nvm.sh"
     executable: /bin/bash
 
-- name: Set up nvm in user's bashrc
-  become: yes
-  become_user: "{{ username }}"
-  blockinfile:
-    path: "/home/{{ username }}/.bashrc"
-    create: yes
-    block: |
-      # NVM configuration
-      export NVM_DIR="$HOME/.nvm"
-      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-      [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - NVM"
+# Note: nvm configuration is now managed in dotfiles repo
+# The bashrc setup is handled by the dotfiles symlink
 
 - name: Install Node.js LTS via nvm
   become: yes
@@ -80,6 +70,7 @@
     - eslint
     - yarn
     - pnpm
+    - pyright
   register: npm_install
   changed_when: "'added' in npm_install.stdout or 'updated' in npm_install.stdout"
   failed_when: npm_install.rc != 0 and 'EEXIST' not in npm_install.stderr
