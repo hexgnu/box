@@ -53,3 +53,52 @@ Each component is organized as an Ansible role under its own directory with a `t
 - RPMFusion repositories (free and non-free) are configured for additional packages
 - Dotfiles are managed via a separate repository at github.com/hexgnu/dotfiles
 - The system includes both native package management (DNF) and Flatpak for application installation
+
+## Repository Relationship
+
+This repository is part of a two-repo development environment setup:
+
+### Box Repository (This Repo)
+**Purpose:** System provisioning and package installation
+**Responsibilities:**
+- Install packages via DNF (system package manager)
+- Add third-party repositories (RPMFusion, Azure CLI, GCloud)
+- Install language version managers (pyenv, nvm, rbenv - the tools)
+- Install system-wide utilities (gh, direnv, podman, tmux, neovim)
+- Install modern CLI tools (fzf, zoxide, eza, bat, fd, delta, etc.)
+- Install GUI applications (Brave, Slack, Flatpaks)
+- Install desktop environment (i3, rofi, fonts)
+- Configure system services (sshd, hostname)
+
+**What Box Should NOT Do:**
+- Configure shell environment (bashrc, profile)
+- Configure user applications (nvim, tmux, git, i3 config)
+- Manage symlinks for user configs
+- Add configuration to dotfiles-managed files
+
+### Dotfiles Repository
+**Purpose:** User configuration and personalization
+**Location:** ~/git/personal/dotfiles
+**Responsibilities:**
+- Shell configuration (bashrc, profile, aliases)
+- Editor configuration (nvim/init.lua)
+- Git configuration (gitconfig, aliases)
+- Window manager configuration (i3 config)
+- Terminal multiplexer (tmux.conf)
+- Custom scripts (bin/)
+- Symlink management
+
+**What Dotfiles Should NOT Do:**
+- Install system packages
+- Require sudo/root privileges
+- Modify system files outside home directory
+
+### Workflow
+1. Run Ansible playbook (box) to provision system
+2. Manually run dotfiles installation for user configuration
+3. Install specific language versions as needed
+
+### Boundary Enforcement
+- Ansible installs pyenv/nvm/rbenv but does NOT configure them
+- Dotfiles configures pyenv/nvm/rbenv (lazy-loading, shell integration)
+- No overlap or duplication between repositories

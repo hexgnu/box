@@ -40,7 +40,11 @@
   roles:
     - setup
     - keys
-    - dotfiles  # Deploy dotfiles before other roles that depend on them
+    # Dotfiles role is available but NOT run automatically (tagged 'manual').
+    # Run manually after provisioning: cd ~/git/personal/dotfiles && ./bin/dotfiles
+    # Or run with: ansible-playbook -K -i hosts jupiter.yml --tags dotfiles
+    - role: dotfiles
+      tags: [dotfiles, manual, never]
     - i3
     - i3blocks
     - flatpak
@@ -54,7 +58,10 @@
     - direnv
     - slack
     - zoom
+    - 1password  # 1Password CLI for password management
     - nvidia
+    - wireguard  # VPN server for secure remote access
+    - ddns       # Dynamic DNS for jupiter.modulus7.com
   become_method: sudo
   become: true
   

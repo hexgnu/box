@@ -69,7 +69,79 @@ This playbook sets up a complete development workstation including:
 - **Fonts**: Source Code Pro, Font Awesome
 - **Browsers**: Brave browser
 - **Media**: VLC media player
-- **Dotfiles**: Automatically clones and sets up personal dotfiles from GitHub
+
+## Post-Installation Steps
+
+After running the Ansible playbook, complete setup manually:
+
+### 1. Dotfiles Configuration
+
+This playbook installs packages but does NOT configure your shell and applications automatically (to preserve your ability to customize).
+
+To install dotfiles:
+```bash
+cd ~/git/personal/dotfiles
+./bin/dotfiles
+```
+
+Or, to run dotfiles via Ansible:
+```bash
+ansible-playbook -K -i hosts jupiter.yml --tags dotfiles
+```
+
+### 2. Install Language Versions
+
+Version managers are installed, but you choose which versions to use:
+
+```bash
+# Python (via pyenv)
+pyenv install 3.12
+pyenv global 3.12
+
+# Node.js (via nvm)
+nvm install --lts
+nvm use --lts
+
+# Ruby (via rbenv)
+rbenv install 3.3.0
+rbenv global 3.3.0
+```
+
+### 3. Verify Setup
+
+```bash
+# Check tools are available
+which fzf zoxide eza bat fd delta lazygit
+gh --version
+git --version
+tmux -V
+nvim --version
+
+# Check version managers
+pyenv --version
+nvm --version
+rbenv --version
+```
+
+## Repository Relationship
+
+This repository is part of a two-repo development environment setup:
+
+- **box** (this repo): System provisioning and package installation
+  - Installs packages via DNF
+  - Manages system-level configuration
+  - Requires sudo/root access
+  - Run once per machine, occasionally for updates
+
+- **dotfiles** (~/git/personal/dotfiles): User configuration and preferences
+  - Configures shell, editor, git, tmux, i3, etc.
+  - User-owned files and symlinks
+  - No sudo required
+  - Updated frequently, version controlled
+
+**Boundary:** Ansible handles system setup (root), dotfiles handles user config (no sudo).
+
+See dotfiles repo at: https://github.com/hexgnu/dotfiles
 
 ## Customization
 

@@ -6,7 +6,7 @@
     update: yes
   become: yes
   become_user: "{{ username }}"
-  tags: [dotfiles]
+  tags: [dotfiles, manual]
 
 - name: Run dotfiles setup script
   shell: |
@@ -14,4 +14,4 @@
     ./bin/dotfiles
   become: yes
   become_user: "{{ username }}"
-  tags: [dotfiles]
+  tags: [dotfiles, manual]
