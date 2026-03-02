@@ -1,0 +1,14 @@
+---
+# Dynamic DNS Configuration
+ddns_provider: cloudflare  # Options: cloudflare, duckdns, noip, custom
+ddns_domain: jupiter.modulus7.com
+ddns_check_interval: 300  # Check every 5 minutes
+
+# Cloudflare configuration (most common)
+cloudflare_email: "{{ vault_cloudflare_email | default('your-email@example.com') }}"
+cloudflare_api_token: "{{ vault_cloudflare_api_token | default('YOUR_API_TOKEN') }}"
+cloudflare_zone_id: "{{ vault_cloudflare_zone_id | default('YOUR_ZONE_ID') }}"
+
+# Alternative: DuckDNS (free option)
+duckdns_token: "{{ vault_duckdns_token | default('YOUR_TOKEN') }}"
+duckdns_domain: "{{ vault_duckdns_domain | default('jupiter-modulus7') }}"  # Would be jupiter-modulus7.duckdns.org

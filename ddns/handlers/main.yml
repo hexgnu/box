@@ -1,0 +1,14 @@
+---
+- name: restart ddns
+  become: true
+  systemd:
+    name: ddns.service
+    state: restarted
+    daemon_reload: true
+
+- name: restart ddns timer
+  become: true
+  systemd:
+    name: ddns.timer
+    state: restarted
+    daemon_reload: true

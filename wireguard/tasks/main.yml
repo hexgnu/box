@@ -1,0 +1,115 @@
+---
+- name: Install WireGuard packages
+  become: true
+  dnf:
+    name:
+      - wireguard-tools
+      - qrencode  # For generating QR codes for mobile clients if needed later
+    state: present
+
+- name: Enable IP forwarding
+  become: true
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+
+- name: Enable IPv6 forwarding
+  become: true
+  sysctl:
+    name: net.ipv6.conf.all.forwarding
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+
+- name: Create WireGuard directory
+  become: true
+  file:
+    path: /etc/wireguard
+    state: directory
+    mode: '0700'
+    owner: root
+    group: root
+
+- name: Generate server private key
+  become: true
+  shell: wg genkey
+  register: server_private_key
+  changed_when: false
+  when: wireguard_server_private_key is not defined
+
+- name: Generate server public key
+  become: true
+  shell: echo "{{ server_private_key.stdout | default(wireguard_server_private_key) }}" | wg pubkey
+  register: server_public_key
+  changed_when: false
+
+- name: Create WireGuard server configuration
+  become: true
+  template:
+    src: wg0.conf.j2
+    dest: /etc/wireguard/{{ wireguard_interface }}.conf
+    owner: root
+    group: root
+    mode: '0600'
+  notify: restart wireguard
+
+- name: Generate client configurations
+  become: true
+  template:
+    src: client.conf.j2
+    dest: "/etc/wireguard/client-{{ item.name }}.conf"
+    owner: root
+    group: root
+    mode: '0600'
+  loop: "{{ wireguard_clients }}"
+  vars:
+    client_ip: "{{ item.ip }}"
+    client_name: "{{ item.name }}"
+
+- name: Start and enable WireGuard
+  become: true
+  systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Configure firewall for WireGuard
+  become: true
+  firewalld:
+    port: "{{ wireguard_port }}/udp"
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Remove overly permissive firewall rules
+  become: true
+  firewalld:
+    port: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: disabled
+  loop:
+    - 1025-65535/tcp
+    - 1025-65535/udp
+
+- name: Add WireGuard interface to trusted zone
+  become: true
+  firewalld:
+    zone: trusted
+    interface: "{{ wireguard_interface }}"
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: Display server public key
+  debug:
+    msg: "WireGuard server public key: {{ server_public_key.stdout }}"
+
+- name: Display client configuration location
+  debug:
+    msg: "Client configurations saved in /etc/wireguard/client-*.conf"

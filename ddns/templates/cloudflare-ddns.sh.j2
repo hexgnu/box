@@ -1,0 +1,39 @@
+#!/bin/bash
+# Cloudflare DDNS Update Script for {{ ddns_domain }}
+
+# Configuration
+DOMAIN="{{ ddns_domain }}"
+ZONE_ID="{{ cloudflare_zone_id }}"
+API_TOKEN="{{ cloudflare_api_token }}"
+
+# Get current public IP
+PUBLIC_IP=$(curl -s https://api.ipify.org)
+if [ -z "$PUBLIC_IP" ]; then
+    echo "Failed to get public IP"
+    exit 1
+fi
+
+echo "Current public IP: $PUBLIC_IP"
+
+# Get the record ID for the domain
+RECORD_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?name=$DOMAIN&type=A" \
+    -H "Authorization: Bearer $API_TOKEN" \
+    -H "Content-Type: application/json" | jq -r '.result[0].id')
+
+if [ "$RECORD_ID" == "null" ] || [ -z "$RECORD_ID" ]; then
+    echo "Creating new A record for $DOMAIN"
+    # Create new record
+    curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+        -H "Authorization: Bearer $API_TOKEN" \
+        -H "Content-Type: application/json" \
+        --data "{\"type\":\"A\",\"name\":\"$DOMAIN\",\"content\":\"$PUBLIC_IP\",\"ttl\":120,\"proxied\":false}"
+else
+    echo "Updating existing A record for $DOMAIN (ID: $RECORD_ID)"
+    # Update existing record
+    curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$RECORD_ID" \
+        -H "Authorization: Bearer $API_TOKEN" \
+        -H "Content-Type: application/json" \
+        --data "{\"type\":\"A\",\"name\":\"$DOMAIN\",\"content\":\"$PUBLIC_IP\",\"ttl\":120,\"proxied\":false}"
+fi
+
+echo "DDNS update completed for $DOMAIN -> $PUBLIC_IP"

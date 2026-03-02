@@ -1,0 +1,17 @@
+[Unit]
+Description=Dynamic DNS Update Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+{% if ddns_provider == 'cloudflare' %}
+ExecStart=/usr/local/bin/cloudflare-ddns.sh
+{% elif ddns_provider == 'duckdns' %}
+ExecStart=/usr/local/bin/duckdns.sh
+{% endif %}
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

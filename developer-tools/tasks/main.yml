@@ -66,6 +66,54 @@
       - gnome-screenshot
     state: latest
 
+# Modern CLI Tools (2026 standard development environment)
+- name: Install modern CLI tools
+  dnf:
+    name:
+      - fzf            # Fuzzy finder
+      - zoxide         # Smart directory jumper
+      - eza            # Modern ls replacement
+      - bat            # Better cat with syntax highlighting
+      - fd-find        # Fast find alternative
+      - git-delta      # Beautiful git diffs
+      - lazygit        # Git terminal UI
+      - btop           # Modern system monitor
+      - tldr           # Simplified man pages
+      - yq             # YAML processor
+      - ripgrep        # Fast grep alternative
+      - gh             # GitHub CLI (already installed above, included for completeness)
+      - jq             # JSON processor
+    state: latest
+  tags: [cli-tools, modern-tools]
+
+# Verify Modern CLI Tools Installation
+- name: Verify modern CLI tools are available
+  command: "which {{ item }}"
+  register: tool_check
+  changed_when: false
+  failed_when: false
+  loop:
+    - fzf
+    - zoxide
+    - eza
+    - bat
+    - fd
+    - delta
+    - lazygit
+    - btop
+    - tldr
+    - rg
+    - jq
+    - yq
+  tags: [cli-tools, modern-tools, verify]
+
+- name: Report missing tools
+  debug:
+    msg: "WARNING: {{ item.item }} is not available in PATH"
+  when: item.rc != 0
+  loop: "{{ tool_check.results }}"
+  tags: [cli-tools, modern-tools, verify]
+
 # Hadolint - Docker/Containerfile linter
 - name: Check if hadolint is installed
   stat:

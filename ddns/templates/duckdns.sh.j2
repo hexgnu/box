@@ -1,0 +1,18 @@
+#!/bin/bash
+# DuckDNS Update Script (free alternative)
+
+DOMAIN="{{ duckdns_domain }}"
+TOKEN="{{ duckdns_token }}"
+
+# Update DuckDNS
+echo "Updating DuckDNS domain: $DOMAIN.duckdns.org"
+echo url="https://www.duckdns.org/update?domains=$DOMAIN&token=$TOKEN&ip=" | curl -k -o /tmp/duckdns.log -K -
+
+# Check result
+if grep -q "OK" /tmp/duckdns.log; then
+    echo "DuckDNS update successful"
+else
+    echo "DuckDNS update failed"
+    cat /tmp/duckdns.log
+    exit 1
+fi

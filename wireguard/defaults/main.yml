@@ -1,0 +1,28 @@
+---
+# WireGuard VPN Configuration for jupiter.modulus7.com
+wireguard_port: 51820
+wireguard_interface: wg0
+wireguard_network: 10.200.200.0/24
+wireguard_server_ip: 10.200.200.1
+wireguard_dns: 1.1.1.1, 1.0.0.1
+
+# Server endpoint
+wireguard_endpoint: jupiter.modulus7.com
+
+# Client configurations
+wireguard_clients:
+  - name: laptop
+    ip: 10.200.200.2
+
+# Enable IP forwarding for VPN
+enable_ip_forwarding: true
+
+# Persistent keepalive for NAT traversal
+wireguard_persistent_keepalive: 25
+
+# Allow access to local development services through VPN
+wireguard_allowed_services:
+  - ssh           # Port 22
+  - postgresql    # Port 5432
+  - http-alt      # Port 8080
+  - node-dev      # Port 3000

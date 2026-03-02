@@ -1,0 +1,65 @@
+---
+- name: Install required packages for DDNS
+  become: true
+  dnf:
+    name:
+      - curl
+      - jq
+      - bind-utils  # For dig command
+    state: present
+
+# Cloudflare DDNS Setup
+- name: Create Cloudflare DDNS update script
+  become: true
+  template:
+    src: cloudflare-ddns.sh.j2
+    dest: /usr/local/bin/cloudflare-ddns.sh
+    owner: root
+    group: root
+    mode: '0755'
+  when: ddns_provider == 'cloudflare'
+
+# DuckDNS Setup (free alternative)
+- name: Create DuckDNS update script
+  become: true
+  template:
+    src: duckdns.sh.j2
+    dest: /usr/local/bin/duckdns.sh
+    owner: root
+    group: root
+    mode: '0755'
+  when: ddns_provider == 'duckdns'
+
+- name: Create systemd service for DDNS updates
+  become: true
+  template:
+    src: ddns.service.j2
+    dest: /etc/systemd/system/ddns.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart ddns
+
+- name: Create systemd timer for DDNS updates
+  become: true
+  template:
+    src: ddns.timer.j2
+    dest: /etc/systemd/system/ddns.timer
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart ddns timer
+
+- name: Enable and start DDNS timer
+  become: true
+  systemd:
+    name: ddns.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Run initial DDNS update
+  become: true
+  systemd:
+    name: ddns.service
+    state: started

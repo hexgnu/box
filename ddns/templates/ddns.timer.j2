@@ -1,0 +1,10 @@
+[Unit]
+Description=Run DDNS update every {{ ddns_check_interval }} seconds
+Requires=ddns.service
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec={{ ddns_check_interval }}
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,19 @@
+[Interface]
+Address = {{ wireguard_server_ip }}/24
+ListenPort = {{ wireguard_port }}
+PrivateKey = {{ server_private_key.stdout | default(wireguard_server_private_key) }}
+
+# Enable NAT for client traffic
+PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o enp5s0 -j MASQUERADE
+PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o enp5s0 -j MASQUERADE
+
+{% for client in wireguard_clients %}
+# {{ client.name }}
+[Peer]
+PublicKey = {{ client.public_key | default('GENERATE_ON_CLIENT') }}
+AllowedIPs = {{ client.ip }}/32
+{% if wireguard_persistent_keepalive is defined %}
+PersistentKeepalive = {{ wireguard_persistent_keepalive }}
+{% endif %}
+
+{% endfor %}

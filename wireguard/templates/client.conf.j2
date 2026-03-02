@@ -1,0 +1,18 @@
+[Interface]
+Address = {{ client_ip }}/24
+PrivateKey = GENERATE_THIS_ON_CLIENT
+DNS = {{ wireguard_dns }}
+
+[Peer]
+PublicKey = {{ server_public_key.stdout }}
+Endpoint = {{ wireguard_endpoint }}:{{ wireguard_port }}
+AllowedIPs = 0.0.0.0/0, ::/0  # Route all traffic through VPN
+PersistentKeepalive = {{ wireguard_persistent_keepalive }}
+
+# Instructions:
+# 1. On your laptop, generate a key pair:
+#    wg genkey | tee privatekey | wg pubkey > publickey
+# 2. Replace GENERATE_THIS_ON_CLIENT with the contents of privatekey
+# 3. Share the publickey with the server admin to add to server config
+# 4. Save this file as /etc/wireguard/wg0.conf on your laptop
+# 5. Start with: sudo wg-quick up wg0

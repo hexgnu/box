@@ -15,11 +15,8 @@ azure_cli_enabled: true
 gcloud_cli_enabled: true
 
 # Rust packages to install via cargo
+# NOTE: ripgrep, fd-find, bat, and eza are now installed via DNF in modern-tools
 rust_cargo_packages:
-  - ripgrep
-  - fd-find
-  - bat
-  - exa
   - tokei
 
 # Standard repo packages
@@ -27,6 +24,22 @@ dev_standard_packages:
   - GraphicsMagick
   - GraphicsMagick-devel
   - httpie
+
+# Modern CLI Tools (2026 standard development environment)
+# These tools provide modern alternatives to traditional Unix tools
+modern_cli_tools:
+  - fzf           # Fuzzy finder for interactive searching
+  - zoxide        # Smart cd alternative that learns your habits
+  - eza           # Modern ls with colors and git integration
+  - bat           # Cat clone with syntax highlighting and git integration
+  - fd-find       # Fast and user-friendly alternative to find
+  - git-delta     # Syntax-highlighted git diffs with line numbers
+  - lazygit       # Terminal UI for git commands
+  - btop          # Resource monitor with better UI than htop
+  - tldr          # Community-driven simplified man pages
+  - yq            # YAML processor (like jq for YAML)
+  - ripgrep       # Extremely fast grep alternative
+  - jq            # Command-line JSON processor
 
 # Hadolint version (for downloading)
 hadolint_version: latest

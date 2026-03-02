@@ -1,0 +1,17 @@
+---
+- name: Add 1Password repository
+  yum_repository:
+    name: 1password
+    description: 1Password Stable Channel
+    baseurl: https://downloads.1password.com/linux/rpm/stable/$basearch
+    enabled: yes
+    gpgcheck: yes
+    repo_gpgcheck: yes
+    gpgkey: https://downloads.1password.com/linux/keys/1password.asc
+  become: true
+
+- name: Install 1Password CLI
+  dnf:
+    name: 1password-cli
+    state: present
+  become: true
