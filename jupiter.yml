@@ -60,7 +60,7 @@
     - zoom
     - 1password  # 1Password CLI for password management
     - nvidia
-    - wireguard  # VPN server for secure remote access
+    # - wireguard  # VPN server - DISABLED (needs configuration, failing to start)
     - ddns       # Dynamic DNS for jupiter.modulus7.com
   become_method: sudo
   become: true
