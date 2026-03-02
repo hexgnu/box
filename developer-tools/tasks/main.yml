@@ -86,26 +86,70 @@
   tags: [cli-tools, modern-tools]
 
 # Enable COPR repositories for tools not in standard repos
+# Note: COPR repos may not have Fedora 42 builds yet - ignore errors
 - name: Enable COPR repo for eza
   command: dnf copr enable -y atim/eza
   args:
     creates: /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:atim:eza.repo
+  ignore_errors: true
+  register: eza_copr
   tags: [cli-tools, modern-tools, copr]
 
 - name: Enable COPR repo for lazygit
   command: dnf copr enable -y atim/lazygit
   args:
     creates: /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:atim:lazygit.repo
+  ignore_errors: true
+  register: lazygit_copr
   tags: [cli-tools, modern-tools, copr]
 
-# Install tools from COPR repos
-- name: Install modern CLI tools from COPR repos
+# Install tools from COPR repos (if repos were enabled successfully)
+- name: Install lazygit from COPR
   dnf:
-    name:
-      - eza            # Modern ls replacement with git integration
-      - lazygit        # Git terminal UI
+    name: lazygit
     state: latest
+  when: lazygit_copr is succeeded
+  ignore_errors: true
   tags: [cli-tools, modern-tools, copr]
+
+- name: Install eza from COPR
+  dnf:
+    name: eza
+    state: latest
+  when: eza_copr is succeeded
+  ignore_errors: true
+  tags: [cli-tools, modern-tools, copr]
+
+# Fallback: Install eza from GitHub releases if COPR failed
+- name: Check if eza is installed
+  command: which eza
+  register: eza_check
+  changed_when: false
+  failed_when: false
+  tags: [cli-tools, modern-tools]
+
+- name: Install eza from GitHub releases (fallback)
+  block:
+    - name: Download latest eza release
+      get_url:
+        url: https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-gnu.tar.gz
+        dest: /tmp/eza.tar.gz
+        mode: '0644'
+
+    - name: Extract eza binary
+      unarchive:
+        src: /tmp/eza.tar.gz
+        dest: /usr/local/bin/
+        remote_src: yes
+        mode: '0755'
+
+    - name: Clean up eza download
+      file:
+        path: /tmp/eza.tar.gz
+        state: absent
+  when: eza_check.rc != 0
+  ignore_errors: true
+  tags: [cli-tools, modern-tools, github]
 
 # Verify Modern CLI Tools Installation
 - name: Verify modern CLI tools are available
