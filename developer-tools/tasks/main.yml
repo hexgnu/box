@@ -67,23 +67,33 @@
     state: latest
 
 # Modern CLI Tools (2026 standard development environment)
-- name: Install modern CLI tools
+# Install tools available in standard Fedora repos
+- name: Install modern CLI tools from standard repos
   dnf:
     name:
       - fzf            # Fuzzy finder
       - zoxide         # Smart directory jumper
-      - eza            # Modern ls replacement
       - bat            # Better cat with syntax highlighting
       - fd-find        # Fast find alternative
-      - git-delta      # Beautiful git diffs
-      - lazygit        # Git terminal UI
       - btop           # Modern system monitor
-      - tldr           # Simplified man pages
-      - yq             # YAML processor
       - ripgrep        # Fast grep alternative
       - gh             # GitHub CLI (already installed above, included for completeness)
       - jq             # JSON processor
     state: latest
+  tags: [cli-tools, modern-tools]
+
+# Install tools that may require COPR or alternative repos
+# Note: These packages may not be in standard repos and might fail
+- name: Install modern CLI tools from extended repos
+  dnf:
+    name:
+      - eza            # Modern ls replacement (may need COPR)
+      - git-delta      # Beautiful git diffs (may need COPR)
+      - lazygit        # Git terminal UI (may need COPR)
+      - tldr           # Simplified man pages (may need COPR or tealdeer)
+      - yq             # YAML processor
+    state: latest
+  ignore_errors: true
   tags: [cli-tools, modern-tools]
 
 # Verify Modern CLI Tools Installation
@@ -113,6 +123,26 @@
   when: item.rc != 0
   loop: "{{ tool_check.results }}"
   tags: [cli-tools, modern-tools, verify]
+
+# Manual installation for eza (not in Fedora 42 standard repos)
+# The rust-eza package was orphaned by its maintainer
+- name: Check if eza is installed
+  command: which eza
+  register: eza_installed
+  changed_when: false
+  failed_when: false
+  tags: [cli-tools, modern-tools, manual]
+
+- name: Display eza installation instructions if missing
+  debug:
+    msg: |
+      eza is not installed. To install manually:
+      1. Download from: https://github.com/eza-community/eza/releases/latest
+      2. Extract and copy to /usr/local/bin/eza
+      3. Or use cargo: cargo install eza
+      4. Or enable COPR: sudo dnf copr enable atim/eza && sudo dnf install eza
+  when: eza_installed.rc != 0
+  tags: [cli-tools, modern-tools, manual]
 
 # Hadolint - Docker/Containerfile linter
 - name: Check if hadolint is installed
