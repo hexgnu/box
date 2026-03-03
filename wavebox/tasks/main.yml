@@ -3,69 +3,24 @@
 # Recommended for multi-account Teams, Slack, email consolidation
 # Research: ../dotfiles/research/unified-comms-evaluation.md
 
-- name: Create bin directory for user binaries
-  file:
-    path: "/home/{{ username }}/bin"
-    state: directory
-    mode: '0755'
-    owner: "{{ username }}"
-    group: "{{ username }}"
+- name: Import Wavebox GPG key
+  rpm_key:
+    state: present
+    key: https://download.wavebox.app/static/wavebox_repo.key
+  become: yes
   tags: [wavebox]
 
-- name: Check if Wavebox AppImage already exists
-  stat:
-    path: "/home/{{ username }}/bin/Wavebox.AppImage"
-  register: wavebox_appimage
-  tags: [wavebox]
-
-- name: Download Wavebox AppImage
+- name: Add Wavebox RPM repository
   get_url:
-    url: https://download.wavebox.app/stable/linux/appimage/x86_64/Wavebox.AppImage
-    dest: "/home/{{ username }}/bin/Wavebox.AppImage"
-    mode: '0755'
-    owner: "{{ username }}"
-    group: "{{ username }}"
-  when: not wavebox_appimage.stat.exists
-  tags: [wavebox]
-
-- name: Create .local/share/applications directory
-  file:
-    path: "/home/{{ username }}/.local/share/applications"
-    state: directory
-    mode: '0755'
-    owner: "{{ username }}"
-    group: "{{ username }}"
-  tags: [wavebox]
-
-- name: Create Wavebox desktop entry
-  copy:
-    content: |
-      [Desktop Entry]
-      Name=Wavebox
-      Comment=Unified Communication Platform (Slack, Teams, Email, Zoom)
-      Exec=/home/{{ username }}/bin/Wavebox.AppImage
-      Icon=wavebox
-      Type=Application
-      Categories=Network;WebBrowser;Communication;
-      StartupWMClass=Wavebox
-    dest: "/home/{{ username }}/.local/share/applications/wavebox.desktop"
+    url: https://download.wavebox.app/stable/linux/rpm/wavebox.repo
+    dest: /etc/yum.repos.d/wavebox.repo
     mode: '0644'
-    owner: "{{ username }}"
-    group: "{{ username }}"
+  become: yes
   tags: [wavebox]
 
-- name: Ensure Wavebox AppImage is executable
-  file:
-    path: "/home/{{ username }}/bin/Wavebox.AppImage"
-    mode: '0755'
-    owner: "{{ username }}"
-    group: "{{ username }}"
-  tags: [wavebox]
-
-# Install FUSE2 if needed (required for AppImages on some systems)
-- name: Install FUSE2 for AppImage support
+- name: Install Wavebox via DNF
   dnf:
-    name: fuse-libs
+    name: Wavebox
     state: present
   become: yes
   tags: [wavebox]
@@ -73,21 +28,26 @@
 - name: Display Wavebox installation instructions
   debug:
     msg: |
-      ✅ Wavebox installed successfully!
+      ✅ Wavebox installed successfully via RPM repository!
 
-      Launch: ~/bin/Wavebox.AppImage
-      Desktop: Search for "Wavebox" in application menu
+      Launch: wavebox (or search "Wavebox" in application menu)
+      Desktop: Wavebox application should appear in rofi ($mod+d)
 
-      i3 Integration: Add to dotfiles/i3/config:
+      i3 Integration: Already configured in dotfiles/i3/config
         assign [class="Wavebox"] $ws2
+        Press $mod+2 to access your unified comms workspace
 
       Setup Guide:
-      1. Launch Wavebox (7-day Pro trial starts)
-      2. Create Spaces:
-         - Space 1: OneVizion (Teams + Outlook)
+      1. Launch Wavebox (7-day Pro trial starts automatically)
+      2. Create Spaces for cookie isolation:
+         - Space 1: OneVizion (Teams + Outlook + Zoom)
          - Space 2: OnPoint (Teams + Outlook)
-         - Space 3: Personal (Slack, Proton Mail, Zoom)
+         - Space 3: Personal (Slack + Proton Mail)
       3. Each Space has isolated cookies (no Teams logout/login!)
+      4. Both Teams accounts stay logged in simultaneously
 
-      Full setup: ~/git/personal/dotfiles/research/unified-comms-evaluation.md
+      Full setup guide: ~/git/personal/dotfiles/research/unified-comms-evaluation.md
+
+      Updates: Wavebox will auto-update via DNF when you run:
+        sudo dnf upgrade
   tags: [wavebox]
