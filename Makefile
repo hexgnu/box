@@ -62,6 +62,16 @@ list-tags:
 dry-run:
 	ansible-playbook -K -i hosts jupiter.yml --check --diff
 
+# Dry run for quick provisioning
+dry-run-quick:
+	@echo "Checking what would change with quick provisioning..."
+	ansible-playbook -K -i hosts jupiter.yml --check --diff --tags quick
+
+# Verbose mode to see what's actually running
+verbose:
+	@echo "Running with verbose output to see all actions..."
+	ansible-playbook -K -i hosts jupiter.yml --tags quick -v
+
 # Clean up temporary files
 clean:
 	rm -rf /tmp/ansible_cache /tmp/ansible-retry

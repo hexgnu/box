@@ -50,13 +50,23 @@
     creates: "/home/{{ username }}/.nvm/versions/node"
   tags: [dev-tools, quick]
 
+- name: Install bun (modern JavaScript runtime and package manager)
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    curl -fsSL https://bun.sh/install | bash
+  args:
+    executable: /bin/bash
+    creates: "/home/{{ username }}/.bun/bin/bun"
+  tags: [dev-tools, quick]
+
 - name: Check if @anthropic-ai/claude-code is installed
   become: yes
   become_user: "{{ username }}"
   shell: |
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    npm list -g @anthropic-ai/claude-code 2>/dev/null
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
+    which claude
   args:
     executable: /bin/bash
   register: claude_check
@@ -64,20 +74,18 @@
   failed_when: false
   tags: [dev-tools, quick]
 
-- name: Install @anthropic-ai/claude-code globally
+- name: Install @anthropic-ai/claude-code globally via bun
   become: yes
   become_user: "{{ username }}"
   shell: |
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    npm config set prefix "$HOME/.nvm/versions/node/$(node --version)"
-    npm install -g @anthropic-ai/claude-code
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
+    bun install -g @anthropic-ai/claude-code
   args:
     executable: /bin/bash
   when: claude_check.rc != 0
   register: claude_install
-  changed_when: "'added' in claude_install.stdout or 'updated' in claude_install.stdout"
-  failed_when: claude_install.rc != 0 and 'EEXIST' not in claude_install.stderr
+  changed_when: claude_install.rc == 0
   tags: [dev-tools, quick]
 
 - name: Check if global npm packages are installed
@@ -124,16 +132,23 @@
   become: yes
   become_user: "{{ username }}"
   shell: |
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
     which claude && claude --version
   args:
     executable: /bin/bash
   register: claude_verify
   changed_when: false
   failed_when: false
+  tags: [dev-tools, quick]
 
 - name: Display Claude Code installation status
   debug:
-    msg: "Claude Code installed: {{ claude_verify.stdout }}"
+    msg: "Claude Code installed via bun: {{ claude_verify.stdout }}"
   when: claude_verify.rc == 0
+  tags: [dev-tools, quick]
+
+- name: Display bun installation path
+  debug:
+    msg: "Bun installed at ~/.bun/bin/bun - Make sure this is in your PATH"
+  tags: [dev-tools, quick]
