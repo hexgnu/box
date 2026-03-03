@@ -1,8 +1,23 @@
-.PHONY: all depends clean check nvidia dev desktop help vim
+.PHONY: all update provision depends clean check nvidia dev desktop help vim
 
-# Default target
-all: check
-	@echo "Running full system configuration..."
+# Default target - quick incremental provisioning (fast, skips if already done)
+all: provision
+
+# Quick incremental provisioning (recommended for daily use)
+provision: check
+	@echo "Running quick incremental provisioning..."
+	@echo "This skips already-installed packages and uses state:present"
+	ansible-playbook -K -i hosts jupiter.yml --tags quick
+
+# Full system update - upgrade all packages to latest versions
+update: check
+	@echo "Running full system update (upgrades to latest versions)..."
+	@echo "This will update all managed packages to their latest versions"
+	ansible-playbook -K -i hosts jupiter.yml --tags update
+
+# Complete provisioning without updates (all roles, but state:present)
+full: check
+	@echo "Running complete provisioning (all roles, incremental mode)..."
 	ansible-playbook -K -i hosts jupiter.yml
 
 # Install dependencies
@@ -54,14 +69,31 @@ debug:
 # Help target
 help:
 	@echo "Available targets:"
-	@echo "  make all        - Run complete configuration"
+	@echo ""
+	@echo "Main Commands:"
+	@echo "  make            - Quick incremental provisioning (default, ~5min)"
+	@echo "  make provision  - Same as 'make' - fast incremental updates"
+	@echo "  make update     - Full system upgrade (updates all to latest versions)"
+	@echo "  make full       - Complete provisioning (all roles, but incremental)"
+	@echo ""
+	@echo "Setup:"
 	@echo "  make depends    - Install Ansible and dependencies"
+	@echo ""
+	@echo "Selective Provisioning:"
 	@echo "  make nvidia     - Install NVIDIA drivers only"
 	@echo "  make dev        - Install development tools only"
+	@echo "  make vim        - Install vim/neovim only"
 	@echo "  make desktop    - Install desktop applications only"
 	@echo "  make containers - Setup Podman only"
+	@echo ""
+	@echo "Utilities:"
 	@echo "  make check      - Validate playbook syntax"
 	@echo "  make dry-run    - Show what would change without making changes"
 	@echo "  make list-tags  - List all available tags"
 	@echo "  make clean      - Remove temporary files"
 	@echo "  make debug      - Run with verbose output"
+	@echo ""
+	@echo "Recommended workflow:"
+	@echo "  - First time:     make full"
+	@echo "  - Daily updates:  make"
+	@echo "  - Fedora upgrade: make update"
