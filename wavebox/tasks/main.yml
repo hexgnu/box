@@ -1,0 +1,93 @@
+---
+# Wavebox installation - Unified communication platform
+# Recommended for multi-account Teams, Slack, email consolidation
+# Research: ../dotfiles/research/unified-comms-evaluation.md
+
+- name: Create bin directory for user binaries
+  file:
+    path: "/home/{{ username }}/bin"
+    state: directory
+    mode: '0755'
+    owner: "{{ username }}"
+    group: "{{ username }}"
+  tags: [wavebox]
+
+- name: Check if Wavebox AppImage already exists
+  stat:
+    path: "/home/{{ username }}/bin/Wavebox.AppImage"
+  register: wavebox_appimage
+  tags: [wavebox]
+
+- name: Download Wavebox AppImage
+  get_url:
+    url: https://download.wavebox.app/stable/linux/appimage/x86_64/Wavebox.AppImage
+    dest: "/home/{{ username }}/bin/Wavebox.AppImage"
+    mode: '0755'
+    owner: "{{ username }}"
+    group: "{{ username }}"
+  when: not wavebox_appimage.stat.exists
+  tags: [wavebox]
+
+- name: Create .local/share/applications directory
+  file:
+    path: "/home/{{ username }}/.local/share/applications"
+    state: directory
+    mode: '0755'
+    owner: "{{ username }}"
+    group: "{{ username }}"
+  tags: [wavebox]
+
+- name: Create Wavebox desktop entry
+  copy:
+    content: |
+      [Desktop Entry]
+      Name=Wavebox
+      Comment=Unified Communication Platform (Slack, Teams, Email, Zoom)
+      Exec=/home/{{ username }}/bin/Wavebox.AppImage
+      Icon=wavebox
+      Type=Application
+      Categories=Network;WebBrowser;Communication;
+      StartupWMClass=Wavebox
+    dest: "/home/{{ username }}/.local/share/applications/wavebox.desktop"
+    mode: '0644'
+    owner: "{{ username }}"
+    group: "{{ username }}"
+  tags: [wavebox]
+
+- name: Ensure Wavebox AppImage is executable
+  file:
+    path: "/home/{{ username }}/bin/Wavebox.AppImage"
+    mode: '0755'
+    owner: "{{ username }}"
+    group: "{{ username }}"
+  tags: [wavebox]
+
+# Install FUSE2 if needed (required for AppImages on some systems)
+- name: Install FUSE2 for AppImage support
+  dnf:
+    name: fuse-libs
+    state: present
+  become: yes
+  tags: [wavebox]
+
+- name: Display Wavebox installation instructions
+  debug:
+    msg: |
+      ✅ Wavebox installed successfully!
+
+      Launch: ~/bin/Wavebox.AppImage
+      Desktop: Search for "Wavebox" in application menu
+
+      i3 Integration: Add to dotfiles/i3/config:
+        assign [class="Wavebox"] $ws2
+
+      Setup Guide:
+      1. Launch Wavebox (7-day Pro trial starts)
+      2. Create Spaces:
+         - Space 1: OneVizion (Teams + Outlook)
+         - Space 2: OnPoint (Teams + Outlook)
+         - Space 3: Personal (Slack, Proton Mail, Zoom)
+      3. Each Space has isolated cookies (no Teams logout/login!)
+
+      Full setup: ~/git/personal/dotfiles/research/unified-comms-evaluation.md
+  tags: [wavebox]

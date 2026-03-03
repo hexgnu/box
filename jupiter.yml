@@ -58,6 +58,7 @@
     - direnv
     - slack
     - zoom
+    - wavebox    # Unified communications (Teams x2, Slack, Email, Zoom)
     - 1password  # 1Password CLI for password management
     - nvidia
     # - wireguard  # VPN server - DISABLED (needs configuration, failing to start)
