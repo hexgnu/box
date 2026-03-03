@@ -1,7 +1,12 @@
-.PHONY: all update provision depends clean check nvidia dev desktop help vim
+.PHONY: all update provision fast depends clean check nvidia dev desktop help vim
 
 # Default target - quick incremental provisioning (fast, skips if already done)
 all: provision
+
+# Ultra-fast mode - skips banner and pre/post tasks
+fast: check
+	@echo "⚡ FAST MODE - No banner, quick tags only"
+	ansible-playbook -K -i hosts jupiter.yml --tags quick --skip-tags always
 
 # Quick incremental provisioning (recommended for daily use)
 provision: check
@@ -72,6 +77,7 @@ help:
 	@echo ""
 	@echo "Main Commands:"
 	@echo "  make            - Quick incremental provisioning (default, ~5min)"
+	@echo "  make fast       - ⚡ FASTEST - Skips banner, quick tags only (~2-3min)"
 	@echo "  make provision  - Same as 'make' - fast incremental updates"
 	@echo "  make update     - Full system upgrade (updates all to latest versions)"
 	@echo "  make full       - Complete provisioning (all roles, but incremental)"
