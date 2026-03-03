@@ -14,10 +14,12 @@ provision: check
 	@echo "This skips already-installed packages and uses state:present"
 	ansible-playbook -K -i hosts jupiter.yml --tags quick
 
-# Full system update - upgrade all packages to latest versions
+# Full system update - upgrade ALL packages to latest versions
 update: check
-	@echo "Running full system update (upgrades to latest versions)..."
-	@echo "This will update all managed packages to their latest versions"
+	@echo "⚡ Running FULL SYSTEM UPDATE (dnf upgrade + all managed packages) ⚡"
+	@echo "This runs 'dnf upgrade' on the entire system PLUS updates all managed packages"
+	@echo "WARNING: This may take 15-20 minutes and will upgrade everything"
+	@echo ""
 	ansible-playbook -K -i hosts jupiter.yml --tags update
 
 # Complete provisioning without updates (all roles, but state:present)
@@ -89,7 +91,7 @@ help:
 	@echo "  make            - Quick incremental provisioning (default, ~5min)"
 	@echo "  make fast       - ⚡ FASTEST - Skips banner, quick tags only (~2-3min)"
 	@echo "  make provision  - Same as 'make' - fast incremental updates"
-	@echo "  make update     - Full system upgrade (updates all to latest versions)"
+	@echo "  make update     - ⚡ FULL SYSTEM UPGRADE - dnf upgrade + all packages (~15-20min)"
 	@echo "  make full       - Complete provisioning (all roles, but incremental)"
 	@echo ""
 	@echo "Setup:"

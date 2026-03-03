@@ -1,5 +1,16 @@
 ---
-- name: Install the latest version of Zettlr Texlive and Pandoc
+- name: Install authoring tools (TeX, Pandoc, AsciiDoc)
+  dnf:
+    name:
+      - texlive-base
+      - texlive-xetex
+      - pandoc
+      - asciidoc
+      - asciidoc-latex
+    state: present
+  tags: [packages, authoring, quick]
+
+- name: Update authoring tools to latest
   dnf:
     name:
       - texlive-base
@@ -8,3 +19,4 @@
       - asciidoc
       - asciidoc-latex
     state: latest
+  tags: [update]

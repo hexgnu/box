@@ -66,7 +66,7 @@
   become_method: sudo
   become: true
   
-  tasks:  
+  tasks:
     - hostname:
         name: jupiter.home
 
@@ -76,18 +76,33 @@
         state: started
 
     - name: Install RPMFusion free
-      tags: [personal]
+      tags: [personal, quick]
       dnf:
         name: "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ fedora_version }}.noarch.rpm"
         disable_gpg_check: yes
         state: present
 
     - name: Install RPMFusion non free
-      tags: [personal]
+      tags: [personal, quick]
       dnf:
         disable_gpg_check: yes
         name: "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ fedora_version }}.noarch.rpm"
         state: present
+
+    # System-wide update task - runs with --tags update
+    - name: "⚡ System-Wide DNF Upgrade (updates ALL packages to latest) ⚡"
+      dnf:
+        name: "*"
+        state: latest
+        update_cache: yes
+      tags: [update, system-update]
+      register: dnf_upgrade_result
+
+    - name: Display packages upgraded
+      debug:
+        msg: "System upgrade complete. {{ dnf_upgrade_result.results | length }} packages processed."
+      when: dnf_upgrade_result is defined
+      tags: [update, system-update]
 
   post_tasks:
     - name: "✨ Transformation Complete! ✨"
