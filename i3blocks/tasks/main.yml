@@ -8,16 +8,33 @@
       - make
       - gcc
       - git
+    state: present
+  tags: [i3blocks, packages, desktop, quick]
+
+- name: Update build dependencies to latest
+  dnf:
+    name:
+      - autoconf
+      - automake
+      - make
+      - gcc
+      - git
     state: latest
-  tags: [i3blocks]
+  tags: [update]
 
 - name: git clone the i3blocks repo
-  tags: [i3blocks]
+  tags: [i3blocks, desktop, quick]
   git:
     update: false
     repo: https://github.com/vivien/i3blocks
     dest: /home/{{ username }}/git/personal/i3blocks
   become_user: "{{ username }}"
+
+- name: Check if i3blocks is already compiled and installed
+  stat:
+    path: /usr/local/bin/i3blocks
+  register: i3blocks_binary
+  tags: [i3blocks, desktop, quick]
 
 - name: autogen the configure file
   command: ./autogen.sh
@@ -25,6 +42,8 @@
     chdir: /home/{{ username }}/git/personal/i3blocks
     creates: /home/{{ username }}/git/personal/i3blocks/configure
   become_user: "{{ username }}"
+  when: not i3blocks_binary.stat.exists
+  tags: [i3blocks, desktop]
 
 - name: configure
   command: ./configure
@@ -32,14 +51,20 @@
     chdir: /home/{{ username }}/git/personal/i3blocks
     creates: /home/{{ username }}/git/personal/i3blocks/i3blocks-config.h
   become_user: "{{ username }}"
+  when: not i3blocks_binary.stat.exists
+  tags: [i3blocks, desktop]
 
 - name: make it
   make:
     chdir: /home/{{ username }}/git/personal/i3blocks
   become_user: "{{ username }}"
+  when: not i3blocks_binary.stat.exists
+  tags: [i3blocks, desktop]
 
 - name: install it
   make:
     chdir: /home/{{ username }}/git/personal/i3blocks
     target: install
   become: true
+  when: not i3blocks_binary.stat.exists
+  tags: [i3blocks, desktop]

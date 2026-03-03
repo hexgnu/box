@@ -3,10 +3,31 @@
   become: true
   become_user: hexgnu
   git:
-    update: true
+    update: false
     repo: https://github.com/rbenv/rbenv.git
     dest: /home/hexgnu/.rbenv
+  tags: [dev-tools, quick]
+
 - name: requisite packages
+  dnf:
+    state: present
+    name:
+      - autoconf
+      - gcc
+      - rust
+      - patch
+      - make
+      - bzip2
+      - openssl-devel
+      - libyaml-devel
+      - libffi-devel
+      - readline-devel
+      - zlib-devel
+      - gdbm-devel
+      - ncurses-devel
+  tags: [packages, dev-tools, quick]
+
+- name: update requisite packages to latest
   dnf:
     state: latest
     name:
@@ -23,12 +44,15 @@
       - zlib-devel
       - gdbm-devel
       - ncurses-devel
+  tags: [update]
+
 - name: install ruby-build
   become: true
   become_user: hexgnu
   git:
-    update: true
+    update: false
     repo: https://github.com/rbenv/ruby-build.git
     dest: /home/hexgnu/.rbenv/plugins/ruby-build
+  tags: [dev-tools, quick]
 - name: install 3.2.2
   command: rbenv install 3.2.2

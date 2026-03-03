@@ -3,10 +3,19 @@
   git:
     repo: https://github.com/hexgnu/dotfiles.git
     dest: "/home/{{ username }}/git/personal/dotfiles"
+    update: false
+  become: yes
+  become_user: "{{ username }}"
+  tags: [dotfiles, manual, quick]
+
+- name: Update dotfiles repository
+  git:
+    repo: https://github.com/hexgnu/dotfiles.git
+    dest: "/home/{{ username }}/git/personal/dotfiles"
     update: yes
   become: yes
   become_user: "{{ username }}"
-  tags: [dotfiles, manual]
+  tags: [update, dotfiles-update]
 
 - name: Run dotfiles setup script
   shell: |
@@ -14,4 +23,4 @@
     ./bin/dotfiles
   become: yes
   become_user: "{{ username }}"
-  tags: [dotfiles, manual]
+  tags: [dotfiles, manual, quick]

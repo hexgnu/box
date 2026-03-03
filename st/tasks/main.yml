@@ -6,17 +6,30 @@
           update: false
           repo: git@github.com:hexgnu/st.git
           dest: /home/hexgnu/git/personal/st
+  tags: [desktop, quick]
 
 - name: install dependencies
   dnf:
     name: ["libXft-devel", "libX11-devel"]
     state: present
+  tags: [packages, desktop, quick]
+
+- name: Check if st is already compiled and installed
+  stat:
+    path: /usr/local/bin/st
+  register: st_binary
+  tags: [desktop, quick]
 
 - name: make and install st
   make:
           chdir: /home/hexgnu/git/personal/st
+  when: not st_binary.stat.exists
+  tags: [desktop]
+
 - name: install it
   make:
           chdir: /home/hexgnu/git/personal/st
           target: install
+  when: not st_binary.stat.exists
+  tags: [desktop]
           

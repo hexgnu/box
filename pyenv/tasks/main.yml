@@ -3,6 +3,29 @@
 
 - name: Install pyenv dependencies
   dnf:
+    state: present
+    name:
+      - make
+      - gcc
+      - gcc-c++
+      - zlib-devel
+      - bzip2
+      - bzip2-devel
+      - readline-devel
+      - sqlite
+      - sqlite-devel
+      - openssl-devel
+      - tk-devel
+      - libffi-devel
+      - xz-devel
+      - python3-tkinter
+      - findutils
+      - git
+      - tk-devel
+  tags: [packages, dev-tools, quick]
+
+- name: Update pyenv dependencies to latest
+  dnf:
     state: latest
     name:
       - make
@@ -22,6 +45,7 @@
       - findutils
       - git
       - tk-devel
+  tags: [update]
 
 - name: Clone pyenv repository for user
   become: yes
@@ -29,7 +53,8 @@
   git:
     repo: https://github.com/pyenv/pyenv.git
     dest: "/home/{{ username }}/.pyenv"
-    update: yes
+    update: false
+  tags: [dev-tools, quick]
 
 - name: Clone pyenv-virtualenv plugin
   become: yes
@@ -37,7 +62,8 @@
   git:
     repo: https://github.com/pyenv/pyenv-virtualenv.git
     dest: "/home/{{ username }}/.pyenv/plugins/pyenv-virtualenv"
-    update: yes
+    update: false
+  tags: [dev-tools, quick]
 
 - name: Clone pyenv-update plugin
   become: yes
@@ -45,7 +71,8 @@
   git:
     repo: https://github.com/pyenv/pyenv-update.git
     dest: "/home/{{ username }}/.pyenv/plugins/pyenv-update"
-    update: yes
+    update: false
+  tags: [dev-tools, quick]
 
 # Pyenv configuration (shell integration, lazy-loading, etc.) is managed by dotfiles repo.
 # This role only installs pyenv and its plugins. Users install Python versions manually

@@ -5,7 +5,8 @@
 - name: Install GitHub CLI
   dnf:
     name: gh
-    state: latest
+    state: present
+  tags: [packages, dev-tools, quick]
 
 # Azure CLI
 - name: Import Microsoft GPG key
@@ -25,7 +26,8 @@
 - name: Install Azure CLI
   dnf:
     name: azure-cli
-    state: latest
+    state: present
+  tags: [packages, dev-tools, quick]
 
 # Google Cloud SDK
 - name: Add Google Cloud SDK repository
@@ -43,7 +45,8 @@
 - name: Install Google Cloud CLI
   dnf:
     name: google-cloud-cli
-    state: latest
+    state: present
+  tags: [packages, dev-tools, quick]
 
 # Rust and Cargo
 - name: Install Rust and Cargo
@@ -54,7 +57,8 @@
       - rust-src
       - rust-std-static
       - rust-analyzer
-    state: latest
+    state: present
+  tags: [packages, dev-tools, quick]
 
 # Development Tools from standard repos
 - name: Install development tools from repos
@@ -64,7 +68,8 @@
       - GraphicsMagick-devel
       - httpie
       - gnome-screenshot
-    state: latest
+    state: present
+  tags: [packages, dev-tools, quick]
 
 # Modern CLI Tools (2026 standard development environment)
 # Install tools available in standard Fedora repos
@@ -82,7 +87,7 @@
       - git-delta      # Beautiful git diffs with syntax highlighting
       - tealdeer       # Simplified man pages (tldr Rust implementation)
       - yq             # YAML processor (like jq for YAML)
-    state: latest
+    state: present
   tags: [cli-tools, modern-tools]
 
 # COPR repositories don't support Fedora 42 yet - install from GitHub releases instead
@@ -193,6 +198,7 @@
   stat:
     path: /usr/local/bin/hadolint
   register: hadolint_installed
+  tags: [dev-tools, quick]
 
 - name: Download hadolint binary
   get_url:
@@ -200,3 +206,33 @@
     dest: /usr/local/bin/hadolint
     mode: '0755'
   when: not hadolint_installed.stat.exists
+  tags: [dev-tools]
+
+# Update task - run with --tags update to upgrade all dev tools to latest
+- name: Update all developer tools to latest versions
+  dnf:
+    name:
+      - gh
+      - azure-cli
+      - google-cloud-cli
+      - rust
+      - cargo
+      - rust-src
+      - rust-std-static
+      - rust-analyzer
+      - GraphicsMagick
+      - GraphicsMagick-devel
+      - httpie
+      - gnome-screenshot
+      - fzf
+      - zoxide
+      - bat
+      - fd-find
+      - btop
+      - ripgrep
+      - jq
+      - git-delta
+      - tealdeer
+      - yq
+    state: latest
+  tags: [update, dev-tools-update]

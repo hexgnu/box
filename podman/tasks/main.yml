@@ -3,7 +3,7 @@
 
 - name: Install Podman and related tools
   dnf:
-    state: latest
+    state: present
     name:
       - podman
       - podman-compose
@@ -14,6 +14,21 @@
       - fuse-overlayfs   # Better filesystem performance for rootless
       - containernetworking-plugins
       - python3-pip      # For podman-compose if needed via pip
+  tags: [packages, dev-tools, quick]
+
+- name: Update Podman and related tools to latest
+  dnf:
+    state: latest
+    name:
+      - podman
+      - podman-compose
+      - buildah
+      - skopeo
+      - slirp4netns
+      - fuse-overlayfs
+      - containernetworking-plugins
+      - python3-pip
+  tags: [update]
 
 - name: Check if user systemd is available
   command: systemctl --user status

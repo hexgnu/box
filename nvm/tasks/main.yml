@@ -3,6 +3,17 @@
 
 - name: Install nvm dependencies
   dnf:
+    state: present
+    name:
+      - curl
+      - git
+      - make
+      - gcc
+      - gcc-c++
+  tags: [packages, dev-tools, quick]
+
+- name: Update nvm dependencies to latest
+  dnf:
     state: latest
     name:
       - curl
@@ -10,6 +21,7 @@
       - make
       - gcc
       - gcc-c++
+  tags: [update]
 
 - name: Download and install nvm
   become: yes
@@ -19,6 +31,7 @@
   args:
     creates: "/home/{{ username }}/.nvm/nvm.sh"
     executable: /bin/bash
+  tags: [dev-tools, quick]
 
 # Note: nvm configuration is now managed in dotfiles repo
 # The bashrc setup is handled by the dotfiles symlink
@@ -35,6 +48,21 @@
   args:
     executable: /bin/bash
     creates: "/home/{{ username }}/.nvm/versions/node"
+  tags: [dev-tools, quick]
+
+- name: Check if @anthropic-ai/claude-code is installed
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    npm list -g @anthropic-ai/claude-code 2>/dev/null
+  args:
+    executable: /bin/bash
+  register: claude_check
+  changed_when: false
+  failed_when: false
+  tags: [dev-tools, quick]
 
 - name: Install @anthropic-ai/claude-code globally
   become: yes
@@ -42,24 +70,23 @@
   shell: |
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    # Ensure npm uses the correct prefix for NVM
     npm config set prefix "$HOME/.nvm/versions/node/$(node --version)"
     npm install -g @anthropic-ai/claude-code
   args:
     executable: /bin/bash
+  when: claude_check.rc != 0
   register: claude_install
   changed_when: "'added' in claude_install.stdout or 'updated' in claude_install.stdout"
   failed_when: claude_install.rc != 0 and 'EEXIST' not in claude_install.stderr
+  tags: [dev-tools, quick]
 
-- name: Install other useful global npm packages
+- name: Check if global npm packages are installed
   become: yes
   become_user: "{{ username }}"
   shell: |
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    # Ensure npm uses the correct prefix for NVM
-    npm config set prefix "$HOME/.nvm/versions/node/$(node --version)"
-    npm install -g {{ item }}
+    npm list -g {{ item }} 2>/dev/null
   args:
     executable: /bin/bash
   loop:
@@ -71,9 +98,27 @@
     - yarn
     - pnpm
     - pyright
+  register: npm_check
+  changed_when: false
+  failed_when: false
+  tags: [dev-tools, quick]
+
+- name: Install other useful global npm packages
+  become: yes
+  become_user: "{{ username }}"
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    npm config set prefix "$HOME/.nvm/versions/node/$(node --version)"
+    npm install -g {{ item.item }}
+  args:
+    executable: /bin/bash
+  loop: "{{ npm_check.results }}"
+  when: item.rc != 0
   register: npm_install
   changed_when: "'added' in npm_install.stdout or 'updated' in npm_install.stdout"
   failed_when: npm_install.rc != 0 and 'EEXIST' not in npm_install.stderr
+  tags: [dev-tools, quick]
 
 - name: Verify Claude Code installation
   become: yes

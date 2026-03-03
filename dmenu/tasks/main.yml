@@ -1,21 +1,34 @@
 ---
 - name: git clone repo
-  tags: [dmenu]
+  tags: [dmenu, desktop, quick]
   become: true
   become_user: hexgnu
   git:
           update: false
           repo: git://git.suckless.org/dmenu
           dest: /home/hexgnu/git/personal/dmenu
+
 - name: install deps
   dnf:
     name: libXinerama-devel
-    state: installed
-  tags: [dmenu]
+    state: present
+  tags: [dmenu, packages, desktop, quick]
+
+- name: Check if dmenu is already compiled and installed
+  stat:
+    path: /usr/local/bin/dmenu
+  register: dmenu_binary
+  tags: [dmenu, desktop, quick]
+
 - name: make dmenu
   make:
           chdir: /home/hexgnu/git/personal/dmenu
+  when: not dmenu_binary.stat.exists
+  tags: [dmenu, desktop]
+
 - name: make install dmenu
   make:
           chdir: /home/hexgnu/git/personal/dmenu
           target: install
+  when: not dmenu_binary.stat.exists
+  tags: [dmenu, desktop]
