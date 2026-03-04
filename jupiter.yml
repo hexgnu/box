@@ -1,12 +1,7 @@
 ---
-# ╔════════════════════════════════════════════════════════════════════════════╗
-# ║                    ⚡️✨ SAILOR JUPITER SYSTEM CONFIG ✨⚡️                  ║
-# ║                                                                            ║
-# ║                         Protected by Jupiter                               ║
-# ║                      Guardian of Thunder & Courage                         ║
-# ║                                                                            ║
-# ║                          木野 まこと (Makoto Kino)                         ║
-# ╚════════════════════════════════════════════════════════════════════════════╝
+# Jupiter System Configuration
+# Ansible playbook for Fedora Linux workstation provisioning
+# Hostname: jupiter.home
 
 - hosts: all
   user: root
@@ -21,22 +16,6 @@
       - ed25519
     fedora_version: 42
   
-  pre_tasks:
-    - name: "⚡ Sailor Jupiter Power Make Up! ⚡"
-      shell: |
-        echo ""
-        echo "        ✨⚡🌸 TRANSFORMATION SEQUENCE INITIATED 🌸⚡✨"
-        echo ""
-        echo "              'Jupiter Star Power, Make Up!'"
-        echo ""
-        python3 {{ playbook_dir }}/sailor_jupiter_banner.py 2>/dev/null || true
-        echo ""
-        echo "        System configuration transformation beginning..."
-        echo ""
-      delegate_to: localhost
-      run_once: true
-      tags: always
-
   roles:
     - setup
     - keys
@@ -90,7 +69,7 @@
         state: present
 
     # System-wide update task - runs with --tags update
-    - name: "⚡ System-Wide DNF Upgrade (updates ALL packages to latest) ⚡"
+    - name: System-Wide DNF Upgrade (updates ALL packages to latest)
       dnf:
         name: "*"
         state: latest
@@ -105,16 +84,9 @@
       tags: [update, system-update]
 
   post_tasks:
-    - name: "✨ Transformation Complete! ✨"
-      shell: |
-        echo ""
-        echo "═══════════════════════════════════════════════════════════"
-        echo "    🌸 'In the name of Jupiter, I'll punish you!' 🌸"
-        echo ""
-        echo "         System {{ hostname }} configured successfully!"
-        echo "              Protected by Sailor Jupiter ⚡"
-        echo "═══════════════════════════════════════════════════════════"
-        echo ""
+    - name: System configuration complete
+      debug:
+        msg: "System {{ hostname }} configured successfully"
       delegate_to: localhost
       run_once: true
       tags: always
