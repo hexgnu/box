@@ -46,4 +46,8 @@ ansible.log
 .cache/
 
 # Setup directory (appears to be temporary)
-setup/group_vars/all/vault.yml
+setup/
+
+# Ansible vault files (contain secrets)
+group_vars/*/vault.yml
+**/vault.ymlgroup_vars/all/vault.yml
