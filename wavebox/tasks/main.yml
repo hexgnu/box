@@ -25,12 +25,25 @@
   become: yes
   tags: [wavebox]
 
+- name: Create Wavebox wrapper script to disable smart card crashes
+  copy:
+    dest: "/home/{{ username }}/bin/wavebox"
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # Wavebox wrapper - disables smart card support to prevent crashes
+      # See: https://github.com/wavebox/waveboxapp/issues (SIGSEGV with pcsc-lite)
+      exec /opt/wavebox.io/wavebox/wavebox --disable-features=SmartCard "$@"
+  become: no
+  tags: [wavebox]
+
 - name: Display Wavebox installation instructions
   debug:
     msg: |
       ✅ Wavebox installed successfully via RPM repository!
 
-      Launch: wavebox (or search "Wavebox" in application menu)
+      Launch: wavebox (wrapper script with crash fix in ~/bin/wavebox)
+      Or: Search "Wavebox" in application menu
       Desktop: Wavebox application should appear in rofi ($mod+d)
 
       i3 Integration: Already configured in dotfiles/i3/config
