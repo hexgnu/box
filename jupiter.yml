@@ -34,6 +34,8 @@
     - nvm
     - podman
     - developer-tools
+    - role: hermes
+      tags: [hermes]  # Hermes Agent + Telegram gateway + MCP connectors
     - direnv
     - slack
     - zoom
