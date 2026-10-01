@@ -1,0 +1,17 @@
+{{ ansible_managed | comment }}
+# Keeps {{ hermes_mail_account }}.token fresh for the sandbox bind mount.
+
+[Unit]
+Description=Refresh the Outlook access token for the hermes sandbox
+
+[Timer]
+# The gateway lingers, so the box can sit for days between logins. Fire soon
+# after boot rather than waiting out a full interval.
+OnBootSec=1min
+OnUnitActiveSec={{ hermes_mail_token_refresh }}
+# Catch up one missed run after suspend or downtime instead of leaving a stale
+# token in place until the next interval comes around.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,28 @@
+#!/bin/sh
+{{ ansible_managed | comment }}
+# ortie's storage.write.command. Receives the rotated refresh token on stdin and
+# replaces the encrypted store with it.
+#
+# Entra returns a new refresh token every time the old one is redeemed, so this
+# runs on roughly every refresh — not just at setup. If it fails, ortie keeps
+# working off the current access token and the *next* refresh fails instead, so
+# errors here surface about an hour late. Hence `set -eu` and the -s check.
+set -eu
+
+out="{{ hermes_ortie_refresh_store }}"
+tmp="$out.new"
+
+# 0077: the ciphertext is only as private as its permissions if the age key ever
+# leaks. Cheap defence in depth.
+umask 077
+
+# -R and not -i: `age -e -i key` is accepted but means "encrypt to this
+# identity's recipient", which reads as a decryption flag at a glance. The public
+# key is extracted once at provision time into its own file, so the intent is on
+# the page.
+{{ hermes_age_bin }} -e -R "{{ hermes_age_recipients_file }}" -o "$tmp"
+
+# A truncated store is unrecoverable without a browser re-auth, so never let one
+# replace a good file. rename(2) is atomic; a concurrent reader sees old or new.
+test -s "$tmp"
+mv "$tmp" "$out"

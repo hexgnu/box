@@ -1,0 +1,133 @@
+---
+# Hermes Agent (NousResearch) — https://github.com/NousResearch/hermes-agent
+hermes_home: "/home/{{ username }}/.hermes"
+hermes_agent_dir: "/home/{{ username }}/.hermes/hermes-agent"
+hermes_bin: "/home/{{ username }}/.local/bin/hermes"
+hermes_installer_url: https://hermes-agent.nousresearch.com/install.sh
+
+# Skills live in the dotfiles repo and are read in place via skills.external_dirs.
+# External dirs are read-only to hermes: anything hermes authors itself still
+# lands in {{ hermes_home }}/skills. That split is intentional — hand-authored
+# skills are versioned, agent-authored ones are scratch.
+hermes_skills_external_dir: "/home/{{ username }}/git/personal/dotfiles/hermes/skills"
+
+# Nous-approved catalog MCPs (see {{ hermes_agent_dir }}/optional-mcps/).
+# Install is automated; OAuth consent is a browser flow and is not.
+hermes_mcp_servers:
+  - todoist
+
+hermes_gateway_service: hermes-gateway.service
+
+# Sandbox image for the docker terminal backend. Built from files/sandbox/Dockerfile
+# on top of hermes' own default base, adding himalaya (email CLI) and ortie (OAuth
+# 2.0 token CLI) so the agent can do mail from inside the sandbox.
+#
+# Setting terminal.docker_image explicitly also resolves an upstream ambiguity: with
+# the key absent, hermes_cli/config_defaults.py reports python3.14-nodejs22 while the
+# container the gateway actually spawns comes from the python3.11-nodejs20 fallback
+# in tools/terminal_tool.py:_get_env_config(). Pinning the key ends the disagreement.
+hermes_sandbox_image: localhost/hermes-sandbox:latest
+hermes_sandbox_build_dir: "/home/{{ username }}/.hermes/sandbox-build"
+
+# --- Mail credential bridge ------------------------------------------------
+# himalaya in the sandbox needs an OAuth access token for Outlook, and getting one
+# means redeeming a long-lived refresh token. Two separate reasons that redemption
+# stays on the host:
+#
+#   1. Rotation. Entra issues a new refresh token on every redemption, and the
+#      terminal backend spawns a fresh container per session with /run/secrets
+#      mounted read-only. A sandbox that refreshed for itself would have nowhere
+#      durable to put the new token and would replay a stale one until Entra
+#      returned invalid_grant.
+#   2. Injection. This agent reads untrusted email, which is the textbook prompt
+#      injection vector, and the sandbox exists precisely because agent-driven
+#      code is not trusted. A refresh token in there is a 90-day credential
+#      behind a public client-id with no second factor.
+#
+# So a user timer redeems on the host and exports only the ~1h access token over
+# the bind mount. Worst case if the sandbox is compromised is one hour of mail.
+hermes_mail_account: onevizion
+hermes_ortie_bin: "/home/{{ username }}/.local/bin/ortie"
+
+# Host and sandbox himalaya configs both render from templates/himalaya-config.toml.j2.
+# Neither file was managed anywhere before — not here, not in dotfiles — so a fresh
+# box had no mail config at all and the old slurp-and-regex derivation had nothing to
+# read. These are the non-secret halves of what used to be hand-written.
+hermes_himalaya_host_config: "/home/{{ username }}/.config/himalaya/config.toml"
+hermes_ortie_host_config: "/home/{{ username }}/.config/ortie/config.toml"
+
+# Vaulted, not because a mailbox address is a credential but because this repo is
+# public — a work address in a public git history is a spam and phishing target and
+# cannot be unpublished. Same treatment as the cloudflare values in ddns/defaults.
+# Set vault_hermes_mail_address in group_vars/all/vault.yml; the assert in
+# tasks/main.yml fails loudly rather than rendering a config that silently
+# authenticates as nobody.
+hermes_mail_address: "{{ vault_hermes_mail_address | default('') }}"
+
+hermes_mail_imap_server: imaps://outlook.office365.com:993
+hermes_mail_smtp_server: smtp://smtp.office365.com:587
+hermes_mail_smtp_starttls: true
+hermes_mail_mailbox_aliases:
+  inbox: INBOX
+
+# Thunderbird's public client id — not a secret, and deliberately not vaulted.
+# Microsoft only grants the Outlook IMAP/SMTP scopes to a handful of approved
+# public clients, so this value is load-bearing: swapping it breaks consent.
+hermes_mail_client_id: 9e5f94bc-e8a4-4e73-b8be-63364c29d753
+hermes_mail_authorization_endpoint: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+hermes_mail_token_endpoint: https://login.microsoftonline.com/common/oauth2/v2.0/token
+hermes_mail_redirect_uri: https://localhost
+hermes_mail_scopes:
+  - https://outlook.office.com/IMAP.AccessAsUser.All
+  - https://outlook.office.com/SMTP.Send
+  - offline_access
+
+# --- Refresh token store (age) ---------------------------------------------
+# Replaces secret-tool. The problem with secret-tool was never encryption, it was
+# that gnome-keyring is a *session* service — D-Bus, an unlocked keyring, a
+# graphical login. The gateway lingers and this box runs for days without one, so
+# the export was failing for reasons unrelated to mail.
+#
+# age is a keyfile and a binary: no agent, no bus, no session. Note that on a
+# single-user box the key sits next to the ciphertext, so this buys protection
+# against backups, stray `cat` and file-sync accidents — not against something
+# already running as this user. The sandbox boundary is what defends against that.
+hermes_age_bin: /usr/bin/age
+hermes_age_keygen_bin: /usr/bin/age-keygen
+hermes_age_key_dir: "/home/{{ username }}/.config/age"
+hermes_age_key_file: "/home/{{ username }}/.config/age/hermes-mail.key"
+hermes_age_recipients_file: "/home/{{ username }}/.config/age/hermes-mail.pub"
+
+# Deliberately NOT under {{ hermes_sandbox_secrets_dir }} — that directory is the
+# bind mount. The refresh token must never be reachable from the container.
+hermes_ortie_refresh_store: "{{ hermes_home }}/ortie-refresh.age"
+hermes_ortie_store_bin: "/home/{{ username }}/.local/bin/hermes-ortie-store"
+
+# Seed only. Once ortie rotates, {{ hermes_ortie_refresh_store }} is the live
+# source of truth and this value is stale — which is why every task that writes
+# the store is create-only. Re-asserting a vault value on each provision would
+# overwrite a good token with an expired one and force a browser re-auth.
+#
+# Leave undefined to migrate the existing token out of the GNOME keyring instead;
+# that path needs the keyring unlocked exactly once. Set it in
+# group_vars/all/vault.yml as vault_hermes_mail_refresh_token to seed a new box.
+hermes_mail_refresh_token: "{{ vault_hermes_mail_refresh_token | default('') }}"
+hermes_mail_keyring_attribute: "account {{ hermes_mail_account }}"
+
+# Host side of the bind mount. 0700 — it holds a live access token.
+hermes_sandbox_secrets_dir: "{{ hermes_home }}/sandbox-secrets"
+# Container side. Read-only: the sandbox has no reason to write here.
+hermes_sandbox_secret_mount: /run/secrets
+
+hermes_mail_token_service: hermes-mail-token.service
+# Entra access tokens are good for roughly an hour; refresh well inside that so
+# a missed run isn't an outage. `ortie token show` refreshes on its own when the
+# cached token is stale, so each run is a no-op until it isn't.
+hermes_mail_token_refresh: 20min
+
+# Terminal backend runs containers. find_docker() in tools/environments/docker.py
+# resolves: HERMES_DOCKER_BINARY -> `docker` on PATH -> `podman` on PATH. This box
+# has no docker; /usr/bin/docker is the podman-docker shim, which execs podman but
+# writes "Emulate Docker CLI using podman" to stderr on every call. Point straight
+# at podman so hermes never goes through the shim.
+hermes_container_runtime: /usr/bin/podman

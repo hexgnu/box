@@ -1,0 +1,516 @@
+---
+# Hermes Agent — install, service state, skills wiring, MCP connectors.
+#
+# This role reproduces the machine-reproducible parts of the hermes setup.
+# Three things stay manual because they are interactive; task 9 asserts they
+# happened and names the exact command if not. See README.md.
+
+- name: Install hermes build dependencies
+  become: true
+  dnf:
+    name:
+      - curl
+      - git
+      - tar
+      - xz
+    state: present
+  tags: [packages, hermes, quick]
+
+- name: Check if hermes is already installed
+  stat:
+    path: "{{ hermes_bin }}"
+  register: hermes_installed
+  tags: [hermes, quick]
+
+# The installer vendors its own toolchain into {{ hermes_home }}/tools —
+# python, node, npm, uv, ripgrep, ffmpeg, chromium. Nothing here comes from dnf.
+- name: Install Hermes Agent
+  shell: |
+    set -o pipefail
+    curl -fsSL {{ hermes_installer_url }} | bash
+  args:
+    executable: /bin/bash
+    creates: "{{ hermes_bin }}"
+  become: true
+  become_user: "{{ username }}"
+  when: not hermes_installed.stat.exists
+  tags: [hermes, quick]
+
+# Opt-in only. The playbook tags this role `hermes`, and ansible propagates a
+# role tag to every task inside it — so without the ansible_run_tags guard this
+# would also fire on `make hermes` and on an untagged `make full`, pulling a new
+# upstream mid-provision. Updates should be a thing you ask for.
+- name: Update Hermes Agent to latest
+  command: "{{ hermes_bin }} update --yes --no-gateway-restart"
+  become: true
+  become_user: "{{ username }}"
+  register: hermes_update
+  changed_when: "'Already up to date' not in hermes_update.stdout"
+  when: >
+    'update' in ansible_run_tags or 'hermes-update' in ansible_run_tags
+  tags: [update, hermes-update]
+
+# Without lingering, the --user gateway is killed at logout and never comes
+# back until the next graphical login. The gateway is a daemon; it needs this.
+- name: Enable systemd lingering for {{ username }}
+  become: true
+  command: "loginctl enable-linger {{ username }}"
+  args:
+    creates: "/var/lib/systemd/linger/{{ username }}"
+  tags: [hermes, quick]
+
+# Deliberately NOT templated. `hermes gateway setup` generates this unit with
+# version-pinned tool paths baked into Environment=PATH (node-26.7.0-linux-x64,
+# npm-12.0.2-linux-x64, ...). Freezing those in a template means the unit rots
+# the first time `hermes update` bumps a vendored toolchain. Same reasoning as
+# config.yaml: hermes owns the file, ansible owns the state.
+- name: Check gateway service unit exists
+  stat:
+    path: "/home/{{ username }}/.config/systemd/user/{{ hermes_gateway_service }}"
+  register: hermes_gateway_unit
+  tags: [hermes, quick]
+
+# Playbook runs with gather_facts: no, so ansible_facts has no uid to read.
+- name: Resolve uid for {{ username }}
+  command: "id -u {{ username }}"
+  register: hermes_uid
+  changed_when: false
+  tags: [hermes, quick]
+
+- name: Enable and start the hermes gateway
+  become: true
+  become_user: "{{ username }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ hermes_uid.stdout }}"
+  systemd:
+    name: "{{ hermes_gateway_service }}"
+    scope: user
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: hermes_gateway_unit.stat.exists
+  tags: [hermes, quick]
+
+- name: Point hermes at dotfiles-managed skills
+  command: >
+    {{ hermes_bin }} config set skills.external_dirs
+    '["{{ hermes_skills_external_dir }}"]'
+  become: true
+  become_user: "{{ username }}"
+  register: hermes_skills_cfg
+  changed_when: "'✓ Set' in hermes_skills_cfg.stdout"
+  tags: [hermes, quick]
+
+- name: Get configured MCP servers
+  command: "{{ hermes_bin }} mcp list"
+  become: true
+  become_user: "{{ username }}"
+  register: hermes_mcp_list
+  changed_when: false
+  tags: [hermes, quick]
+
+- name: Install catalog MCP servers
+  command: "{{ hermes_bin }} mcp install {{ item }}"
+  become: true
+  become_user: "{{ username }}"
+  loop: "{{ hermes_mcp_servers }}"
+  when: item not in hermes_mcp_list.stdout
+  tags: [hermes, quick]
+
+# The container runtime is the one thing in .env that is NOT a secret and NOT
+# interactive, so it does belong to ansible. `hermes gateway setup` writes .env
+# from the upstream template with HERMES_DOCKER_BINARY commented out, which drops
+# the terminal backend onto /usr/bin/docker — the podman-docker shim. Pin it.
+- name: Check hermes .env exists
+  stat:
+    path: "{{ hermes_home }}/.env"
+  register: hermes_env
+  tags: [hermes, quick]
+
+- name: Pin hermes terminal backend to podman
+  become: true
+  become_user: "{{ username }}"
+  lineinfile:
+    path: "{{ hermes_home }}/.env"
+    regexp: '^#?\s*HERMES_DOCKER_BINARY='
+    line: "HERMES_DOCKER_BINARY={{ hermes_container_runtime }}"
+    mode: "0600"
+  when: hermes_env.stat.exists
+  notify: Restart hermes gateway
+  tags: [hermes, quick]
+
+# --- Sandbox image ---------------------------------------------------------
+# The docker terminal backend runs every agent command in a container. The stock
+# base has python and node but no mail tooling, so himalaya and ortie are baked in
+# here. Build is rootless podman as {{ username }}, same user (and therefore same
+# image store) as the gateway that will run it — a root-built image is invisible to
+# the rootless gateway.
+- name: Stage the sandbox build context
+  become: true
+  become_user: "{{ username }}"
+  copy:
+    src: sandbox/
+    dest: "{{ hermes_sandbox_build_dir }}/"
+    mode: "0644"
+  register: hermes_sandbox_ctx
+  tags: [hermes, quick, hermes-sandbox]
+
+- name: Check sandbox image exists
+  become: true
+  become_user: "{{ username }}"
+  command: "{{ hermes_container_runtime }} image exists {{ hermes_sandbox_image }}"
+  register: hermes_sandbox_present
+  failed_when: false
+  changed_when: false
+  tags: [hermes, quick, hermes-sandbox]
+
+# ~4 minutes cold: the builder stage compiles both crates from source. Cached
+# layers make a no-op rerun instant, so this is safe on every provision — but it
+# only fires when the image is missing, the Dockerfile changed, or you ask for it
+# with --tags hermes-sandbox.
+- name: Build the hermes sandbox image
+  become: true
+  become_user: "{{ username }}"
+  command: >
+    {{ hermes_container_runtime }} build
+    -t {{ hermes_sandbox_image }}
+    {{ hermes_sandbox_build_dir }}
+  register: hermes_sandbox_build
+  changed_when: "'Successfully tagged' in hermes_sandbox_build.stdout"
+  when: >
+    hermes_sandbox_present.rc != 0
+    or hermes_sandbox_ctx.changed
+    or 'hermes-sandbox' in ansible_run_tags
+  timeout: 1800
+  tags: [hermes, quick, hermes-sandbox]
+
+- name: Point the terminal backend at the sandbox image
+  command: "{{ hermes_bin }} config set terminal.docker_image {{ hermes_sandbox_image }}"
+  become: true
+  become_user: "{{ username }}"
+  register: hermes_sandbox_cfg
+  changed_when: "'✓ Set' in hermes_sandbox_cfg.stdout"
+  notify: Restart hermes gateway
+  tags: [hermes, quick, hermes-sandbox]
+
+# --- Mail credential bridge ------------------------------------------------
+# See defaults/main.yml for why redemption stays on the host. Short version:
+# rotation has nowhere durable to land in a per-session container, and a
+# mail-reading agent is the wrong place to keep a 90-day credential.
+
+# Without this the himalaya templates render email = "" and both configs look
+# valid while authenticating as nobody — an IMAP error an hour later rather than a
+# provisioning error now. See defaults/main.yml for why the address is vaulted.
+- name: Require the mailbox address from the vault
+  assert:
+    that:
+      - hermes_mail_address | length > 0
+    fail_msg: >-
+      vault_hermes_mail_address is unset. Add it to group_vars/all/vault.yml
+      (ansible-vault edit group_vars/all/vault.yml) and re-run with
+      --ask-vault-pass.
+    quiet: true
+  tags: [hermes, quick, hermes-mail]
+
+- name: Install age for the refresh token store
+  become: true
+  dnf:
+    name: age
+    state: present
+  tags: [packages, hermes, quick, hermes-mail]
+
+# template(1) does not create parent directories, and on a fresh box none of
+# these exist — nothing has run himalaya or ortie interactively yet.
+- name: Create the mail config directories
+  become: true
+  become_user: "{{ username }}"
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ hermes_age_key_dir }}"
+    - "{{ hermes_himalaya_host_config | dirname }}"
+    - "{{ hermes_ortie_host_config | dirname }}"
+  tags: [hermes, quick, hermes-mail]
+
+# age-keygen writes 0600 itself. `creates` is doing real work here: regenerating
+# the key would orphan the ciphertext encrypted to the old one, and the only way
+# back from that is a browser re-auth.
+- name: Generate the mail store age key
+  become: true
+  become_user: "{{ username }}"
+  command: "{{ hermes_age_keygen_bin }} -o {{ hermes_age_key_file }}"
+  args:
+    creates: "{{ hermes_age_key_file }}"
+  tags: [hermes, quick, hermes-mail]
+
+# The wrapper encrypts with -R, so the public half gets its own file. Derived
+# rather than stored so it cannot drift from the private key.
+- name: Extract the age recipient
+  become: true
+  become_user: "{{ username }}"
+  shell: |
+    set -o pipefail
+    umask 077
+    {{ hermes_age_keygen_bin }} -y {{ hermes_age_key_file }} > {{ hermes_age_recipients_file }}
+  args:
+    executable: /bin/bash
+    creates: "{{ hermes_age_recipients_file }}"
+  tags: [hermes, quick, hermes-mail]
+
+# Separate from the 0700 loop above: this is a PATH directory, and the hermes
+# installer already owns it — only the mode differs, so do not fold them together.
+- name: Ensure the user bin directory exists
+  become: true
+  become_user: "{{ username }}"
+  file:
+    path: "{{ hermes_ortie_store_bin | dirname }}"
+    state: directory
+    mode: "0755"
+  tags: [hermes, quick, hermes-mail]
+
+- name: Install the ortie store wrapper
+  become: true
+  become_user: "{{ username }}"
+  template:
+    src: hermes-ortie-store.sh.j2
+    dest: "{{ hermes_ortie_store_bin }}"
+    mode: "0700"
+  tags: [hermes, quick, hermes-mail]
+
+# ortie's own config is templated for the same reason himalaya's is: it was a
+# hand-written file on one host, so it did not survive a reinstall and nothing
+# recorded which flags mattered.
+- name: Install the host ortie config
+  become: true
+  become_user: "{{ username }}"
+  vars:
+    _ortie_read_cmd:
+      - "{{ hermes_age_bin }}"
+      - "-d"
+      - "-i"
+      - "{{ hermes_age_key_file }}"
+      - "{{ hermes_ortie_refresh_store }}"
+  template:
+    src: ortie-config.toml.j2
+    dest: "{{ hermes_ortie_host_config }}"
+    mode: "0600"
+  tags: [hermes, quick, hermes-mail]
+
+- name: Check whether the refresh token store exists
+  become: true
+  become_user: "{{ username }}"
+  stat:
+    path: "{{ hermes_ortie_refresh_store }}"
+  register: hermes_refresh_store
+  tags: [hermes, quick, hermes-mail]
+
+# Both seed tasks are create-only, guarded on the stat above. ortie rewrites this
+# file on every rotation, so re-asserting either source on a later provision would
+# replace a live token with an expired one — see defaults/main.yml.
+#
+# stdin rather than argv: the token would otherwise be visible in ps output and in
+# ansible's command log for the life of the call.
+- name: Seed the refresh token store from the vault
+  become: true
+  become_user: "{{ username }}"
+  shell: |
+    set -eu
+    umask 077
+    {{ hermes_age_bin }} -e -R {{ hermes_age_recipients_file }} -o {{ hermes_ortie_refresh_store }}
+  args:
+    executable: /bin/bash
+    stdin: "{{ hermes_mail_refresh_token }}"
+    # A trailing newline becomes part of the token and Entra rejects the grant.
+    stdin_add_newline: false
+  no_log: true
+  when:
+    - not hermes_refresh_store.stat.exists
+    - hermes_mail_refresh_token | length > 0
+  tags: [hermes, quick, hermes-mail]
+
+# Migration path for this box, where the token predates the store and only exists
+# in the keyring. Needs the keyring unlocked exactly once, and never again — which
+# is the whole point of the change. Non-fatal: a locked keyring is a login away,
+# and the final report names the command.
+- name: Migrate the refresh token out of the GNOME keyring
+  become: true
+  become_user: "{{ username }}"
+  shell: |
+    set -o pipefail
+    set -eu
+    umask 077
+    secret-tool lookup {{ hermes_mail_keyring_attribute }} \
+      | {{ hermes_age_bin }} -e -R {{ hermes_age_recipients_file }} \
+          -o {{ hermes_ortie_refresh_store }}
+    test -s {{ hermes_ortie_refresh_store }}
+  args:
+    executable: /bin/bash
+  environment:
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ hermes_uid.stdout }}/bus"
+  register: hermes_keyring_migrate
+  failed_when: false
+  changed_when: hermes_keyring_migrate.rc == 0
+  when:
+    - not hermes_refresh_store.stat.exists
+    - hermes_mail_refresh_token | length == 0
+  tags: [hermes, quick, hermes-mail]
+
+# A failed seed leaves a zero-byte file behind, and age will not overwrite it on
+# the next run — which would look like a working store and fail at refresh time.
+- name: Remove an empty refresh token store
+  become: true
+  become_user: "{{ username }}"
+  file:
+    path: "{{ hermes_ortie_refresh_store }}"
+    state: absent
+  when:
+    - hermes_keyring_migrate.rc is defined
+    - hermes_keyring_migrate.rc != 0
+  tags: [hermes, quick, hermes-mail]
+
+- name: Install the host himalaya config
+  become: true
+  become_user: "{{ username }}"
+  vars:
+    _himalaya_token_cmd:
+      - "{{ hermes_ortie_bin }}"
+      - "token"
+      - "show"
+      - "-a"
+      - "{{ hermes_mail_account }}"
+  template:
+    src: himalaya-config.toml.j2
+    dest: "{{ hermes_himalaya_host_config }}"
+    mode: "0600"
+  tags: [hermes, quick, hermes-mail]
+
+- name: Create the sandbox secrets directory
+  become: true
+  become_user: "{{ username }}"
+  file:
+    path: "{{ hermes_sandbox_secrets_dir }}"
+    state: directory
+    mode: "0700"
+  tags: [hermes, quick, hermes-mail]
+
+- name: Install the mail token refresh units
+  become: true
+  become_user: "{{ username }}"
+  template:
+    src: "{{ item }}.j2"
+    dest: "/home/{{ username }}/.config/systemd/user/{{ item }}"
+    mode: "0644"
+  loop:
+    - hermes-mail-token.service
+    - hermes-mail-token.timer
+  register: hermes_token_units
+  tags: [hermes, quick, hermes-mail]
+
+- name: Enable the mail token refresh timer
+  become: true
+  become_user: "{{ username }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ hermes_uid.stdout }}"
+  systemd:
+    name: "{{ hermes_mail_token_service | replace('.service', '.timer') }}"
+    scope: user
+    daemon_reload: "{{ hermes_token_units.changed }}"
+    enabled: true
+    state: started
+  tags: [hermes, quick, hermes-mail]
+
+# The timer's first run is OnBootSec, which has long passed on a box that is
+# already up. Prime the file now so the sandbox is usable without a reboot.
+#
+# Still non-fatal, but the failure mode has changed: it no longer depends on a
+# keyring being unlocked. What is left is an unseeded or expired store, which
+# needs a browser re-auth — the final report names the command.
+- name: Export an access token now
+  become: true
+  become_user: "{{ username }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ hermes_uid.stdout }}"
+  command: "systemctl --user start {{ hermes_mail_token_service }}"
+  register: hermes_token_prime
+  failed_when: false
+  changed_when: hermes_token_prime.rc == 0
+  tags: [hermes, quick, hermes-mail]
+
+# Second render of the host template, differing in exactly one input: where the
+# token comes from. There is no ortie in the sandbox and nothing for it to read,
+# so imap.* and smtp.* read the file the timer exports.
+#
+# This replaced a slurp of the host config plus a regex rewrite of the two
+# token.command lines. Same single-source-of-truth property — add a mailbox alias
+# and both configs get it — but it no longer depends on a file that neither repo
+# creates, which is what made this task fail on a box that had never had himalaya
+# configured by hand.
+- name: Render the sandbox himalaya config
+  become: true
+  become_user: "{{ username }}"
+  vars:
+    _himalaya_token_cmd:
+      - "cat"
+      - "{{ hermes_sandbox_secret_mount }}/{{ hermes_mail_account }}.token"
+  template:
+    src: himalaya-config.toml.j2
+    dest: "{{ hermes_sandbox_secrets_dir }}/himalaya.toml"
+    mode: "0600"
+  tags: [hermes, quick, hermes-mail]
+
+# `z` and not `Z`: SELinux is enforcing here, and the backend spawns a fresh
+# container per session. `Z` assigns a per-container category, so concurrent
+# sandboxes would relabel this directory out from under each other. `z` uses the
+# shared container label, which is what a read-only dir shared by all of them wants.
+- name: Mount the secrets directory into the sandbox
+  become: true
+  become_user: "{{ username }}"
+  command: >
+    {{ hermes_bin }} config set terminal.docker_extra_args
+    '{{ hermes_sandbox_docker_args | to_json }}'
+  vars:
+    hermes_sandbox_docker_args:
+      - "-v"
+      - "{{ hermes_sandbox_secrets_dir }}:{{ hermes_sandbox_secret_mount }}:ro,z"
+      - "-e"
+      - "HIMALAYA_CONFIG={{ hermes_sandbox_secret_mount }}/himalaya.toml"
+  register: hermes_docker_args_cfg
+  changed_when: "'✓ Set' in hermes_docker_args_cfg.stdout"
+  notify: Restart hermes gateway
+  tags: [hermes, quick, hermes-mail]
+
+# Preconditions, not actions. These three need a human; the role cannot do them.
+- name: Check interactive setup artifacts
+  stat:
+    path: "{{ item }}"
+  register: hermes_manual
+  loop:
+    - "{{ hermes_home }}/.env"
+    - "{{ hermes_home }}/SOUL.md"
+  tags: [hermes, quick]
+
+- name: Report missing interactive setup steps
+  debug:
+    msg: |
+      Hermes needs these interactive steps — the role cannot automate them:
+
+        {{ hermes_home }}/.env missing        -> run: hermes gateway setup
+                                                 (Telegram bot token, allowed users)
+        {{ hermes_home }}/SOUL.md missing     -> run: hermes setup, then edit SOUL.md
+        Todoist tools not loading             -> run: hermes mcp login todoist
+                                                 (browser OAuth consent, one time)
+        Egress firewall not configured        -> run: hermes egress setup
+        Mail token export failing             -> the refresh token store is
+                                                 missing or expired. Re-auth:
+                                                 ortie auth -a {{ hermes_mail_account }}
+                                                 then: systemctl --user start
+                                                 {{ hermes_mail_token_service }}
+
+      Missing right now: {{ hermes_manual.results
+                            | rejectattr('stat.exists')
+                            | map(attribute='item')
+                            | list | default(['none'], true) | join(', ') }}
+  when: hermes_manual.results | rejectattr('stat.exists') | list | length > 0
+  tags: [hermes, quick]

@@ -1,0 +1,31 @@
+{{ ansible_managed | comment }}
+# Export a short-lived Outlook access token for the hermes sandbox.
+#
+# Runs on the host because that is where the refresh token lives, and it stays
+# there: the sandbox gets this unit's output file over a read-only bind mount and
+# never sees the credential behind it.
+#
+# No [Unit] ordering and no D-Bus. The old version needed both — secret-tool
+# talks to gnome-keyring over the session bus, so this had to wait for
+# graphical-session.target and then still failed whenever the keyring was locked.
+# The store is an age-encrypted file now; nothing to unlock, nothing to wait for.
+
+[Unit]
+Description=Export Outlook access token for the hermes sandbox
+
+[Service]
+Type=oneshot
+
+# Write private, then rename. A container reading mid-write would otherwise get
+# a truncated token and fail auth for no good reason; rename(2) is atomic.
+UMask=0077
+ExecStart=/bin/sh -c '\
+  set -eu; \
+  out="{{ hermes_sandbox_secrets_dir }}/{{ hermes_mail_account }}.token"; \
+  tmp="$out.new"; \
+  {{ hermes_ortie_bin }} token show -a {{ hermes_mail_account }} > "$tmp"; \
+  test -s "$tmp"; \
+  mv "$tmp" "$out"'
+
+[Install]
+WantedBy=default.target

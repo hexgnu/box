@@ -1,0 +1,30 @@
+{{ ansible_managed | comment }}
+# Host-only. ortie never runs inside the sandbox — the container gets a
+# short-lived access token through the bind mount instead. See README.md,
+# "Mail credentials in the sandbox".
+#
+# client-id is Thunderbird's well-known public client. It is not a secret and
+# carries no secret: this is a public OAuth client, so the refresh token below
+# is the entire credential. That is why it is encrypted at rest and why it
+# stays out of the container.
+
+[accounts.{{ hermes_mail_account }}]
+default = true
+client-id = "{{ hermes_mail_client_id }}"
+grant = "authorization-code"
+endpoints.authorization = "{{ hermes_mail_authorization_endpoint }}"
+endpoints.token = "{{ hermes_mail_token_endpoint }}"
+endpoints.redirection = "{{ hermes_mail_redirect_uri }}"
+scopes = {{ hermes_mail_scopes | to_json }}
+auto-refresh = true
+
+# Was `secret-tool`, which is a GNOME session service: it needs D-Bus, an
+# unlocked keyring and therefore a graphical login. The gateway lingers and this
+# box can go days without one, so the token export was failing for reasons that
+# had nothing to do with mail. age has no agent and no daemon — just a keyfile —
+# so the refresh cycle works from boot.
+#
+# Read decrypts to stdout. Write is a wrapper because ortie hands the new token
+# on stdin and age needs a recipient plus an atomic rename; see the template.
+storage.read.command = {{ _ortie_read_cmd | to_json }}
+storage.write.command = "{{ hermes_ortie_store_bin }}"

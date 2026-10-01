@@ -1,0 +1,13 @@
+---
+# The gateway loads .env at process start (dotenv, not systemd EnvironmentFile),
+# so a change to .env is inert until the daemon is restarted.
+- name: Restart hermes gateway
+  become: true
+  become_user: "{{ username }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ hermes_uid.stdout }}"
+  systemd:
+    name: "{{ hermes_gateway_service }}"
+    scope: user
+    state: restarted
+  when: hermes_gateway_unit.stat.exists

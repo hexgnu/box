@@ -1,0 +1,26 @@
+{{ ansible_managed | comment }}
+# Rendered twice from this one template:
+#
+#   host     ~/.config/himalaya/config.toml      token via ortie
+#   sandbox  <secrets>/himalaya.toml             token via cat on the bind mount
+#
+# Everything except the token command is identical, which is the point — adding a
+# mailbox alias or changing a server here reaches both. _himalaya_token_cmd is the
+# only per-render input; see the two tasks that set it in tasks/main.yml.
+
+[accounts.{{ hermes_mail_account }}]
+default = true
+
+email = "{{ hermes_mail_address }}"
+
+imap.server = "{{ hermes_mail_imap_server }}"
+imap.sasl.xoauth2.token.command = {{ _himalaya_token_cmd | to_json }}
+imap.sasl.xoauth2.username = "{{ hermes_mail_address }}"
+
+smtp.server = "{{ hermes_mail_smtp_server }}"
+smtp.sasl.xoauth2.token.command = {{ _himalaya_token_cmd | to_json }}
+smtp.sasl.xoauth2.username = "{{ hermes_mail_address }}"
+smtp.starttls = {{ hermes_mail_smtp_starttls | to_json }}
+{% for alias, folder in hermes_mail_mailbox_aliases.items() %}
+mailbox.alias.{{ alias }} = "{{ folder }}"
+{% endfor %}
