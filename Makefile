@@ -1,18 +1,18 @@
-.PHONY: all update provision fast depends clean check nvidia dev desktop help vim
+.PHONY: all update provision fast depends clean check nvidia dev desktop help vim hermes hermes-mail hermes-sandbox containers
 
 # Default target - quick incremental provisioning (fast, skips if already done)
-all: provision
+all: full
 
 # Ultra-fast mode - skips banner and pre/post tasks
 fast: check
 	@echo "⚡ FAST MODE - No banner, quick tags only"
-	ansible-playbook -K -i hosts jupiter.yml --tags quick --skip-tags always
+	ansible-playbook -K -i hosts jupiter.yml --tags quick --skip-tags always --ask-vault-pass
 
 # Quick incremental provisioning (recommended for daily use)
 provision: check
 	@echo "Running quick incremental provisioning..."
 	@echo "This skips already-installed packages and uses state:present"
-	ansible-playbook -K -i hosts jupiter.yml --tags quick
+	ansible-playbook -K -i hosts jupiter.yml --tags quick --ask-vault-pass
 
 # Full system update - upgrade ALL packages to latest versions
 update: check
@@ -20,12 +20,12 @@ update: check
 	@echo "This runs 'dnf upgrade' on the entire system PLUS updates all managed packages"
 	@echo "WARNING: This may take 15-20 minutes and will upgrade everything"
 	@echo ""
-	ansible-playbook -K -i hosts jupiter.yml --tags update
+	ansible-playbook -K -i hosts jupiter.yml --tags update --ask-vault-pass
 
 # Complete provisioning without updates (all roles, but state:present)
 full: check
 	@echo "Running complete provisioning (all roles, incremental mode)..."
-	ansible-playbook -K -i hosts jupiter.yml
+	ansible-playbook -K -i hosts jupiter.yml --ask-vault-pass
 
 # Install dependencies
 depends:
@@ -34,22 +34,40 @@ depends:
 # Run with specific tags
 nvidia:
 	@echo "Installing NVIDIA drivers and CUDA..."
-	ansible-playbook -K -i hosts jupiter.yml --tags nvidia
+	ansible-playbook -K -i hosts jupiter.yml --tags nvidia --ask-vault-pass
 
 dev:
 	@echo "Installing development tools..."
-	ansible-playbook -K -i hosts jupiter.yml --tags "development,languages"
+	ansible-playbook -K -i hosts jupiter.yml --tags "development,languages" --ask-vault-pass
 
 vim:
 	@echo "INstalling vim"
-	ansible-playbook -K -i hosts jupiter.yml --tags "vim"
+	ansible-playbook -K -i hosts jupiter.yml --tags "vim" --ask-vault-pass
 desktop:
 	@echo "Installing desktop applications..."
-	ansible-playbook -K -i hosts jupiter.yml --tags "desktop,flatpak"
+	ansible-playbook -K -i hosts jupiter.yml --tags "desktop,flatpak" --ask-vault-pass
 
 containers:
 	@echo "Setting up Podman..."
-	ansible-playbook -K -i hosts jupiter.yml --tags podman
+	ansible-playbook -K -i hosts jupiter.yml --tags podman --ask-vault-pass
+
+hermes:
+	@echo "Installing Hermes Agent..."
+	ansible-playbook -K -i hosts jupiter.yml --tags hermes --ask-vault-pass
+
+hermes-mail:
+	@echo "Refreshing Hermes sandbox mail credentials..."
+	ansible-playbook -K -i hosts jupiter.yml --tags hermes-mail --ask-vault-pass
+
+# Rebuilds the sandbox image and removes any container built from an older one.
+# ~4 minutes cold (it compiles himalaya and ortie from source); cached layers make
+# a no-op rerun fast. Needed after editing hermes/files/sandbox/Dockerfile.
+#
+# Skill edits do NOT need this: skills are read in place from the dotfiles repo via
+# skills.external_dirs, so they are live as soon as the file is saved.
+hermes-sandbox:
+	@echo "Rebuilding the Hermes sandbox image..."
+	ansible-playbook -K -i hosts jupiter.yml --tags hermes-sandbox --ask-vault-pass
 
 # Check syntax
 check:
@@ -62,17 +80,17 @@ list-tags:
 
 # Dry run - show what would change
 dry-run:
-	ansible-playbook -K -i hosts jupiter.yml --check --diff
+	ansible-playbook -K -i hosts jupiter.yml --check --diff --ask-vault-pass
 
 # Dry run for quick provisioning
 dry-run-quick:
 	@echo "Checking what would change with quick provisioning..."
-	ansible-playbook -K -i hosts jupiter.yml --check --diff --tags quick
+	ansible-playbook -K -i hosts jupiter.yml --check --diff --tags quick --ask-vault-pass
 
 # Verbose mode to see what's actually running
 verbose:
 	@echo "Running with verbose output to see all actions..."
-	ansible-playbook -K -i hosts jupiter.yml --tags quick -v
+	ansible-playbook -K -i hosts jupiter.yml --tags quick -v --ask-vault-pass
 
 # Clean up temporary files
 clean:
@@ -81,7 +99,7 @@ clean:
 
 # Verbose mode for debugging
 debug:
-	ansible-playbook -K -i hosts jupiter.yml -vvvv
+	ansible-playbook -K -i hosts jupiter.yml -vvvv --ask-vault-pass
 
 # Help target
 help:
@@ -103,6 +121,9 @@ help:
 	@echo "  make vim        - Install vim/neovim only"
 	@echo "  make desktop    - Install desktop applications only"
 	@echo "  make containers - Setup Podman only"
+	@echo "  make hermes         - Install Hermes Agent only"
+	@echo "  make hermes-mail    - Mail credentials + sandbox mounts"
+	@echo "  make hermes-sandbox - Rebuild sandbox image, reap stale containers"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make check      - Validate playbook syntax"
