@@ -478,7 +478,16 @@
 # container per session. `Z` assigns a per-container category, so concurrent
 # sandboxes would relabel this directory out from under each other. `z` uses the
 # shared container label, which is what a read-only dir shared by all of them wants.
-- name: Mount the secrets directory into the sandbox
+- name: Create the sandbox triage state directory
+  become: true
+  become_user: "{{ username }}"
+  file:
+    path: "{{ hermes_sandbox_triage_dir }}"
+    state: directory
+    mode: "0700"
+  tags: [hermes, quick, hermes-mail]
+
+- name: Mount the secrets and triage directories into the sandbox
   become: true
   become_user: "{{ username }}"
   command: >
@@ -488,12 +497,53 @@
     hermes_sandbox_docker_args:
       - "-v"
       - "{{ hermes_sandbox_secrets_dir }}:{{ hermes_sandbox_secret_mount }}:ro,z"
+      - "-v"
+      - "{{ hermes_sandbox_triage_dir }}:{{ hermes_sandbox_triage_mount }}:rw,z"
       - "-e"
       - "HIMALAYA_CONFIG={{ hermes_sandbox_secret_mount }}/himalaya.toml"
   register: hermes_docker_args_cfg
   changed_when: "'✓ Set' in hermes_docker_args_cfg.stdout"
   notify: Restart hermes gateway
   tags: [hermes, quick, hermes-mail]
+
+# The expensive lesson from 2026-10-01. terminal.container_persistent is true, so
+# the backend keeps ONE long-lived container and restarts it by id. Bind mounts and
+# -e flags are fixed at creation: `podman start` replays the original config, so a
+# container predating these settings silently ignores every one of them. The symptom
+# is maximally confusing — config.yaml reads correct, `podman run` by hand works, and
+# the agent still reports an empty /run/secrets.
+#
+# Renaming is not enough; the id is what the backend tracks. The container has to go,
+# and the backend recreates it from the current image and args on the next session.
+- name: Find existing persistent sandbox containers
+  become: true
+  become_user: "{{ username }}"
+  command: >
+    {{ hermes_container_runtime }} ps -a
+    --filter name=^hermes- --format {{ '{{.Names}} {{.Image}}' }}
+  register: hermes_existing_containers
+  changed_when: false
+  failed_when: false
+  tags: [hermes, quick, hermes-mail, hermes-sandbox]
+
+# Reap on either trigger: a container built from a different image, or any change to
+# the image/args config in this run (which the image comparison alone would miss when
+# only the mounts changed).
+- name: Remove sandbox containers that predate the current config
+  become: true
+  become_user: "{{ username }}"
+  command: "{{ hermes_container_runtime }} rm -f {{ item.split()[0] }}"
+  loop: "{{ hermes_existing_containers.stdout_lines | default([]) }}"
+  # default(false) on both: hermes_docker_args_cfg is only registered on the
+  # hermes-mail path and hermes_sandbox_cfg only on hermes-sandbox, so running
+  # either tag alone leaves the other undefined. Same mistake that broke
+  # `make hermes-mail` on hermes_uid — guard every cross-tag register.
+  when:
+    - item | trim | length > 0
+    - item.split()[1] != hermes_sandbox_image
+      or (hermes_docker_args_cfg.changed | default(false))
+      or (hermes_sandbox_cfg.changed | default(false))
+  tags: [hermes, quick, hermes-mail, hermes-sandbox]
 
 # Preconditions, not actions. These three need a human; the role cannot do them.
 - name: Check interactive setup artifacts

@@ -119,6 +119,16 @@ hermes_sandbox_secrets_dir: "{{ hermes_home }}/sandbox-secrets"
 # Container side. Read-only: the sandbox has no reason to write here.
 hermes_sandbox_secret_mount: /run/secrets
 
+# Second mount, read-WRITE, for the inbox-triage ledger. Deliberately a separate
+# directory from sandbox-secrets so that staying resumable never means making the
+# credential mount writable. Holds no secrets — a watermark, deferred message ids
+# and an audit log of what each pass archived.
+#
+# It exists because the terminal backend recreates the container per session, so a
+# scratch file inside the sandbox cannot carry progress from one pass to the next.
+hermes_sandbox_triage_dir: "{{ hermes_home }}/sandbox-triage"
+hermes_sandbox_triage_mount: /run/state
+
 hermes_mail_token_service: hermes-mail-token.service
 # Entra access tokens are good for roughly an hour; refresh well inside that so
 # a missed run isn't an outage. `ortie token show` refreshes on its own when the
