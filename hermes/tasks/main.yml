@@ -64,18 +64,26 @@
 # npm-12.0.2-linux-x64, ...). Freezing those in a template means the unit rots
 # the first time `hermes update` bumps a vendored toolchain. Same reasoning as
 # config.yaml: hermes owns the file, ansible owns the state.
+# Tagged for every selection that can reach the restart handler, not just `hermes`.
+# The handler guards on hermes_gateway_unit, and the tasks that notify it are tagged
+# hermes-mail and hermes-sandbox — so a `--tags hermes-mail` run would reach the
+# handler with this variable undefined and die there.
 - name: Check gateway service unit exists
   stat:
     path: "/home/{{ username }}/.config/systemd/user/{{ hermes_gateway_service }}"
   register: hermes_gateway_unit
-  tags: [hermes, quick]
+  tags: [hermes, quick, hermes-mail, hermes-sandbox]
 
 # Playbook runs with gather_facts: no, so ansible_facts has no uid to read.
+#
+# Same tag reasoning as above, and this one is not hypothetical: `make hermes-mail`
+# skipped it, then failed on the first task whose `environment:` wants
+# XDG_RUNTIME_DIR. Three hermes-mail tasks need this, plus the handler.
 - name: Resolve uid for {{ username }}
   command: "id -u {{ username }}"
   register: hermes_uid
   changed_when: false
-  tags: [hermes, quick]
+  tags: [hermes, quick, hermes-mail, hermes-sandbox]
 
 - name: Enable and start the hermes gateway
   become: true
@@ -279,25 +287,6 @@
     mode: "0700"
   tags: [hermes, quick, hermes-mail]
 
-# ortie's own config is templated for the same reason himalaya's is: it was a
-# hand-written file on one host, so it did not survive a reinstall and nothing
-# recorded which flags mattered.
-- name: Install the host ortie config
-  become: true
-  become_user: "{{ username }}"
-  vars:
-    _ortie_read_cmd:
-      - "{{ hermes_age_bin }}"
-      - "-d"
-      - "-i"
-      - "{{ hermes_age_key_file }}"
-      - "{{ hermes_ortie_refresh_store }}"
-  template:
-    src: ortie-config.toml.j2
-    dest: "{{ hermes_ortie_host_config }}"
-    mode: "0600"
-  tags: [hermes, quick, hermes-mail]
-
 - name: Check whether the refresh token store exists
   become: true
   become_user: "{{ username }}"
@@ -370,6 +359,30 @@
     - hermes_keyring_migrate.rc != 0
   tags: [hermes, quick, hermes-mail]
 
+# Both host configs are written only AFTER the store has been seeded. Ordering is
+# load-bearing: writing the ortie config first replaced a working secret-tool config
+# with one pointing at an age store that did not exist yet, so when the seed then
+# failed the host could no longer refresh at all. Seed first, repoint second.
+#
+# backup: yes because that is still destructive the first time through — whatever
+# was there by hand is the only copy, and this is the task that overwrites it.
+- name: Install the host ortie config
+  become: true
+  become_user: "{{ username }}"
+  vars:
+    _ortie_read_cmd:
+      - "{{ hermes_age_bin }}"
+      - "-d"
+      - "-i"
+      - "{{ hermes_age_key_file }}"
+      - "{{ hermes_ortie_refresh_store }}"
+  template:
+    src: ortie-config.toml.j2
+    dest: "{{ hermes_ortie_host_config }}"
+    mode: "0600"
+    backup: true
+  tags: [hermes, quick, hermes-mail]
+
 - name: Install the host himalaya config
   become: true
   become_user: "{{ username }}"
@@ -384,6 +397,7 @@
     src: himalaya-config.toml.j2
     dest: "{{ hermes_himalaya_host_config }}"
     mode: "0600"
+    backup: true
   tags: [hermes, quick, hermes-mail]
 
 - name: Create the sandbox secrets directory
