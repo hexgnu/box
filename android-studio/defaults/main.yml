@@ -1,0 +1,6 @@
+---
+# Android Studio installation defaults
+android_studio_flatpak_id: com.google.AndroidStudio
+android_sdk_root: "/home/{{ username }}/Android/Sdk"
+android_cmdline_tools_url: "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+flutter_install_dir: "/home/{{ username }}/.local/share/flutter"

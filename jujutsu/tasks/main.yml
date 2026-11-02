@@ -1,0 +1,68 @@
+---
+# Jujutsu (jj) - Git-compatible VCS
+# Not in the Fedora repos, so installed from GitHub releases (same pattern as eza/lazygit)
+
+- name: Check installed jujutsu version
+  command: "{{ jujutsu_install_path }} --version"
+  register: jujutsu_check
+  changed_when: false
+  failed_when: false
+  tags: [jujutsu, cli-tools, dev-tools, quick]
+
+- name: Install jujutsu from GitHub releases
+  block:
+    - name: Download jujutsu release tarball
+      get_url:
+        url: "{{ jujutsu_archive_url }}"
+        dest: /tmp/jujutsu.tar.gz
+        mode: '0644'
+
+    - name: Extract jj binary
+      unarchive:
+        src: /tmp/jujutsu.tar.gz
+        dest: "{{ jujutsu_install_path | dirname }}"
+        remote_src: yes
+        mode: '0755'
+        include:
+          - ./jj
+
+    - name: Clean up jujutsu download
+      file:
+        path: /tmp/jujutsu.tar.gz
+        state: absent
+  when: jujutsu_check.rc != 0 or jujutsu_version not in jujutsu_check.stdout
+  tags: [jujutsu, cli-tools, dev-tools, github, quick]
+
+# Completion script only - shell config (bashrc) belongs to dotfiles
+- name: Ensure bash completion directory exists
+  file:
+    path: "{{ jujutsu_completion_dir }}"
+    state: directory
+    mode: '0755'
+  tags: [jujutsu, cli-tools, dev-tools]
+
+- name: Check for jj bash completion script
+  stat:
+    path: "{{ jujutsu_completion_dir }}/jj"
+  register: jujutsu_completion
+  tags: [jujutsu, cli-tools, dev-tools]
+
+# Regenerated on a fresh install or a version bump so completions track the binary
+- name: Generate jj bash completion
+  shell: "{{ jujutsu_install_path }} util completion bash > {{ jujutsu_completion_dir }}/jj"
+  when: >-
+    not jujutsu_completion.stat.exists
+    or jujutsu_check.rc != 0
+    or jujutsu_version not in jujutsu_check.stdout
+  tags: [jujutsu, cli-tools, dev-tools]
+
+- name: Verify jujutsu is available
+  command: "{{ jujutsu_install_path }} --version"
+  register: jujutsu_verify
+  changed_when: false
+  tags: [jujutsu, cli-tools, verify]
+
+- name: Report jujutsu version
+  debug:
+    msg: "jujutsu installed: {{ jujutsu_verify.stdout }}"
+  tags: [jujutsu, cli-tools, verify]

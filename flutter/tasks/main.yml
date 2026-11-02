@@ -1,0 +1,137 @@
+---
+# Flutter SDK Installation and Configuration
+
+- name: Install Flutter system dependencies
+  become: true
+  dnf:
+    name:
+      - git
+      - curl
+      - wget
+      - unzip
+      - xz
+      - which
+      - clang
+      - cmake
+      - ninja-build
+      - pkg-config
+      - gtk3-devel
+      - libstdc++-devel
+      - mesa-libGLU-devel
+      - egl-utils
+    state: present
+  tags: [packages, dev-tools, quick]
+
+- name: Create Flutter installation directory
+  file:
+    path: "{{ flutter_install_dir | dirname }}"
+    state: directory
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: '0755'
+  tags: [dev-tools, quick]
+
+- name: Check if Flutter is already installed
+  stat:
+    path: "{{ flutter_install_dir }}"
+  register: flutter_dir
+  tags: [dev-tools, quick]
+
+- name: Clone Flutter SDK from GitHub
+  git:
+    repo: "{{ flutter_git_repo }}"
+    dest: "{{ flutter_install_dir }}"
+    version: "{{ flutter_channel }}"
+    depth: 1
+  become_user: "{{ username }}"
+  when: not flutter_dir.stat.exists
+  tags: [dev-tools, quick]
+
+- name: Update Flutter SDK to latest stable
+  command: git pull
+  args:
+    chdir: "{{ flutter_install_dir }}"
+  become_user: "{{ username }}"
+  when: flutter_dir.stat.exists
+  tags: [dev-tools, quick]
+
+- name: Run flutter precache to download platform binaries
+  command: "{{ flutter_install_dir }}/bin/flutter precache --linux"
+  args:
+    chdir: "{{ flutter_install_dir }}"
+  become_user: "{{ username }}"
+  environment:
+    PATH: "{{ flutter_install_dir }}/bin:{{ ansible_env.PATH }}"
+  tags: [dev-tools, quick]
+
+- name: Run flutter doctor to verify installation
+  command: "{{ flutter_install_dir }}/bin/flutter doctor"
+  args:
+    chdir: "{{ flutter_install_dir }}"
+  become_user: "{{ username }}"
+  environment:
+    PATH: "{{ flutter_install_dir }}/bin:{{ ansible_env.PATH }}"
+  register: flutter_doctor_output
+  changed_when: false
+  tags: [dev-tools, quick]
+
+- name: Display flutter doctor output
+  debug:
+    var: flutter_doctor_output.stdout_lines
+
+- name: Install melos for Dart monorepo management
+  command: "{{ flutter_install_dir }}/bin/dart pub global activate melos"
+  environment:
+    PATH: "{{ flutter_install_dir }}/bin:{{ ansible_env.PATH }}"
+  tags: [dev-tools, quick]
+
+- name: Install melos for Dart monorepo management
+  command: "{{ flutter_install_dir }}/bin/dart pub global activate melos"
+  become_user: "{{ username }}"
+  environment:
+    PATH: "{{ flutter_install_dir }}/bin:{{ ansible_env.PATH }}"
+  tags: [dev-tools, quick]
+
+- name: Accept Android SDK licenses
+  shell: yes | {{ android_home }}/cmdline-tools/latest/bin/sdkmanager --licenses
+  become_user: "{{ username }}"
+  environment:
+    ANDROID_HOME: "{{ android_home }}"
+    PATH: "{{ android_home }}/cmdline-tools/latest/bin:{{ ansible_env.PATH }}"
+  changed_when: false
+  tags: [dev-tools, android]
+
+- name: Install Android system image for emulator
+  command: >
+    {{ android_home }}/cmdline-tools/latest/bin/sdkmanager
+    "system-images;android-{{ avd_api_level }};google_apis_playstore;x86_64"
+  become_user: "{{ username }}"
+  environment:
+    ANDROID_HOME: "{{ android_home }}"
+    PATH: "{{ android_home }}/cmdline-tools/latest/bin:{{ ansible_env.PATH }}"
+  tags: [dev-tools, android]
+
+- name: Check if Android AVD already exists
+  command: "{{ android_home }}/cmdline-tools/latest/bin/avdmanager list avd"
+  become_user: "{{ username }}"
+  environment:
+    ANDROID_HOME: "{{ android_home }}"
+    PATH: "{{ android_home }}/cmdline-tools/latest/bin:{{ ansible_env.PATH }}"
+  register: avd_list
+  changed_when: false
+  failed_when: false
+  tags: [dev-tools, android]
+
+- name: Create Android emulator AVD
+  command: >
+    {{ android_home }}/cmdline-tools/latest/bin/avdmanager create avd
+    --name "{{ avd_name }}"
+    --package "system-images;android-{{ avd_api_level }};google_apis_playstore;x86_64"
+    --device "{{ avd_device }}"
+    --force
+  become_user: "{{ username }}"
+  environment:
+    ANDROID_HOME: "{{ android_home }}"
+    PATH: "{{ android_home }}/cmdline-tools/latest/bin:{{ ansible_env.PATH }}"
+  when: avd_name not in avd_list.stdout
+  tags: [dev-tools, android]

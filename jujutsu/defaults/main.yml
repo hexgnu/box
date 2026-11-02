@@ -1,0 +1,12 @@
+---
+# Jujutsu (jj) VCS defaults
+#
+# Jujutsu is not packaged in Fedora 42, so it is installed from the upstream
+# GitHub release tarball. Bump jujutsu_version to upgrade.
+jujutsu_version: "0.46.0"
+jujutsu_install_path: /usr/local/bin/jj
+jujutsu_archive_url: "https://github.com/jj-vcs/jj/releases/download/v{{ jujutsu_version }}/jj-v{{ jujutsu_version }}-x86_64-unknown-linux-musl.tar.gz"
+
+# System-wide shell completion (the same location an RPM would own).
+# Shell *configuration* stays in dotfiles; this is just the completion script.
+jujutsu_completion_dir: /usr/share/bash-completion/completions

@@ -34,3 +34,20 @@
     state: present
     line: "{{ lookup('pipe', 'ssh-keyscan -t rsa github.com') }}"
     regexp: "^github\\.com"
+
+- name: Configure sshd to use post-quantum key exchange algorithms
+  become: true
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?KexAlgorithms'
+    line: 'KexAlgorithms sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256'
+    state: present
+    validate: 'sshd -t -f %s'
+  notify: restart sshd
+
+- name: Ensure sshd is enabled and running
+  become: true
+  systemd:
+    name: sshd
+    enabled: yes
+    state: started

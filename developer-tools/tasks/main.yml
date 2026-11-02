@@ -2,10 +2,31 @@
 # Developer Tools Installation Role
 
 # GitHub CLI
+# Fedora's own gh lags upstream badly (f42 stable sat on 2.87.3 while upstream was
+# at 2.103.x), so track GitHub's repo instead. Its version always sorts higher, so
+# dnf picks it over the Fedora package on upgrade.
+- name: Import GitHub CLI GPG key
+  rpm_key:
+    state: present
+    key: https://cli.github.com/packages/githubcli-archive-keyring.asc
+  tags: [packages, dev-tools, quick]
+
+- name: Add GitHub CLI repository
+  yum_repository:
+    name: gh-cli
+    description: packages for the GitHub CLI
+    baseurl: https://cli.github.com/packages/rpm
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: https://cli.github.com/packages/githubcli-archive-keyring.asc
+  tags: [packages, dev-tools, quick]
+
+# state: latest, not present — the whole reason for the repo above is to stay current,
+# and present is a no-op once gh is installed no matter which repo now offers a newer build.
 - name: Install GitHub CLI
   dnf:
     name: gh
-    state: present
+    state: latest
   tags: [packages, dev-tools, quick]
 
 # Azure CLI
@@ -82,7 +103,6 @@
       - fd-find        # Fast find alternative
       - btop           # Modern system monitor
       - ripgrep        # Fast grep alternative
-      - gh             # GitHub CLI (already installed above, included for completeness)
       - jq             # JSON processor
       - git-delta      # Beautiful git diffs with syntax highlighting
       - tealdeer       # Simplified man pages (tldr Rust implementation)

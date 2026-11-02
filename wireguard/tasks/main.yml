@@ -34,16 +34,34 @@
     owner: root
     group: root
 
-- name: Generate server private key
+- name: Check if WireGuard config already exists
+  become: true
+  stat:
+    path: "/etc/wireguard/{{ wireguard_interface }}.conf"
+  register: wg_config_exists
+
+- name: Read existing private key if config exists
+  become: true
+  shell: grep "^PrivateKey" /etc/wireguard/{{ wireguard_interface }}.conf | awk '{print $3}'
+  register: existing_private_key
+  changed_when: false
+  when: wg_config_exists.stat.exists
+  failed_when: false
+
+- name: Generate server private key (only if no existing config)
   become: true
   shell: wg genkey
   register: server_private_key
   changed_when: false
-  when: wireguard_server_private_key is not defined
+  when: not wg_config_exists.stat.exists
+
+- name: Set private key variable
+  set_fact:
+    wg_private_key: "{{ existing_private_key.stdout if wg_config_exists.stat.exists else server_private_key.stdout }}"
 
 - name: Generate server public key
   become: true
-  shell: echo "{{ server_private_key.stdout | default(wireguard_server_private_key) }}" | wg pubkey
+  shell: echo "{{ wg_private_key }}" | wg pubkey
   register: server_public_key
   changed_when: false
 

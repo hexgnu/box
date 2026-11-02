@@ -1,4 +1,4 @@
-.PHONY: all update provision fast depends clean check nvidia dev desktop help vim hermes hermes-mail hermes-sandbox containers
+.PHONY: all update provision fast depends clean check nvidia dev desktop help vim jj cap hermes hermes-mail hermes-sandbox containers
 
 # Default target - quick incremental provisioning (fast, skips if already done)
 all: full
@@ -43,6 +43,15 @@ dev:
 vim:
 	@echo "INstalling vim"
 	ansible-playbook -K -i hosts jupiter.yml --tags "vim" --ask-vault-pass
+
+jj:
+	@echo "Installing Jujutsu (jj)..."
+	ansible-playbook -K -i hosts jupiter.yml --tags jujutsu --ask-vault-pass
+
+cap:
+	@echo "Installing Cap screen recorder..."
+	ansible-playbook -K -i hosts jupiter.yml --tags cap --ask-vault-pass
+
 desktop:
 	@echo "Installing desktop applications..."
 	ansible-playbook -K -i hosts jupiter.yml --tags "desktop,flatpak" --ask-vault-pass
@@ -119,6 +128,8 @@ help:
 	@echo "  make nvidia     - Install NVIDIA drivers only"
 	@echo "  make dev        - Install development tools only"
 	@echo "  make vim        - Install vim/neovim only"
+	@echo "  make jj         - Install Jujutsu (jj) VCS only"
+	@echo "  make cap        - Install Cap screen recorder only"
 	@echo "  make desktop    - Install desktop applications only"
 	@echo "  make containers - Setup Podman only"
 	@echo "  make hermes         - Install Hermes Agent only"

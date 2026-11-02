@@ -1,7 +1,8 @@
 [Interface]
 Address = {{ wireguard_server_ip }}/24
 ListenPort = {{ wireguard_port }}
-PrivateKey = {{ server_private_key.stdout | default(wireguard_server_private_key) }}
+PrivateKey = {{ wg_private_key }}
+MTU = 1280
 
 # Enable NAT for client traffic
 PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o enp5s0 -j MASQUERADE

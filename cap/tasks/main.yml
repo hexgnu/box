@@ -1,0 +1,50 @@
+---
+# Cap - screen recorder (cap.so)
+# Installed from the official Fedora RPM. Same download-and-install pattern as
+# zoom, since there is no upstream dnf repo to track.
+
+- name: Check installed Cap version
+  command: "rpm -q --qf '%{VERSION}' {{ cap_package_name }}"
+  register: cap_installed
+  changed_when: false
+  failed_when: false
+  tags: [cap, desktop, apps, quick]
+
+# The RPM is ~99MB, so only pull it when it is actually going to be installed.
+- name: Install Cap from the official Fedora RPM
+  block:
+    - name: Download Cap RPM
+      get_url:
+        url: "{{ cap_rpm_url }}"
+        dest: "{{ cap_rpm_tmp_path }}"
+        mode: '0644'
+
+    # Upstream does not sign the RPM (verified: no SIGPGP/SIGGPG header), so
+    # gpg checking has to be off. dnf still resolves the runtime deps
+    # (pipewire-libs, vulkan-loader, libva, ...) from the Fedora repos.
+    - name: Install Cap
+      dnf:
+        name: "{{ cap_rpm_tmp_path }}"
+        state: present
+        disable_gpg_check: yes
+
+    - name: Clean up Cap download
+      file:
+        path: "{{ cap_rpm_tmp_path }}"
+        state: absent
+  when: cap_installed.rc != 0 or cap_installed.stdout != cap_version
+  tags: [cap, desktop, apps, quick]
+
+- name: Verify Cap is installed
+  command: "rpm -q --qf '%{NAME} %{VERSION}-%{RELEASE}' {{ cap_package_name }}"
+  register: cap_verify
+  changed_when: false
+  tags: [cap, desktop, verify]
+
+- name: Report Cap version
+  debug:
+    msg: >-
+      Cap installed: {{ cap_verify.stdout }}
+      {{ '(expected ' ~ cap_version ~ ' - bump cap_version in cap/defaults/main.yml)'
+         if cap_version not in cap_verify.stdout else '' }}
+  tags: [cap, desktop, verify]

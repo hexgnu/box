@@ -1,0 +1,11 @@
+---
+# Flutter SDK version defaults
+flutter_channel: stable
+flutter_install_dir: "/home/{{ username }}/.local/share/flutter"
+flutter_git_repo: https://github.com/flutter/flutter.git
+
+# Android AVD defaults
+android_home: "/home/{{ username }}/Android/Sdk"
+avd_name: "flutter_emulator"
+avd_api_level: "34"
+avd_device: "pixel_7"

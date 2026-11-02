@@ -1,0 +1,138 @@
+---
+# Android Studio and SDK Installation
+
+- name: Install Android Studio via Flatpak
+  community.general.flatpak:
+    name: "{{ android_studio_flatpak_id }}"
+    state: present
+    method: system
+  tags: [packages, dev-tools, quick]
+
+- name: Install Java (required for Android SDK tools)
+  become: true
+  dnf:
+    name:
+      - java-latest-openjdk
+      - java-latest-openjdk-devel
+    state: present
+  tags: [packages, dev-tools, quick]
+
+- name: Create Android SDK directory
+  file:
+    path: "{{ android_sdk_root }}"
+    state: directory
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: '0755'
+  tags: [dev-tools, quick]
+
+- name: Check if cmdline-tools already exists
+  stat:
+    path: "{{ android_sdk_root }}/cmdline-tools/latest"
+  register: cmdline_tools
+  tags: [dev-tools, quick]
+
+- name: Download Android command-line tools
+  get_url:
+    url: "{{ android_cmdline_tools_url }}"
+    dest: "/tmp/commandlinetools-linux.zip"
+    mode: '0644'
+  when: not cmdline_tools.stat.exists
+  tags: [dev-tools, quick]
+
+- name: Extract command-line tools
+  unarchive:
+    src: "/tmp/commandlinetools-linux.zip"
+    dest: "{{ android_sdk_root }}"
+    remote_src: yes
+    owner: "{{ username }}"
+    group: "{{ username }}"
+  when: not cmdline_tools.stat.exists
+  tags: [dev-tools, quick]
+
+- name: Move cmdline-tools to correct location
+  command: mv {{ android_sdk_root }}/cmdline-tools {{ android_sdk_root }}/cmdline-tools-temp
+  args:
+    creates: "{{ android_sdk_root }}/cmdline-tools-temp"
+  when: not cmdline_tools.stat.exists
+  tags: [dev-tools, quick]
+
+- name: Create cmdline-tools/latest directory
+  file:
+    path: "{{ android_sdk_root }}/cmdline-tools/latest"
+    state: directory
+    owner: "{{ username }}"
+    group: "{{ username }}"
+    mode: '0755'
+  when: not cmdline_tools.stat.exists
+  tags: [dev-tools, quick]
+
+- name: Move tools into latest directory
+  shell: mv {{ android_sdk_root }}/cmdline-tools-temp/* {{ android_sdk_root }}/cmdline-tools/latest/
+  args:
+    creates: "{{ android_sdk_root }}/cmdline-tools/latest/bin/sdkmanager"
+  when: not cmdline_tools.stat.exists
+  tags: [dev-tools, quick]
+
+- name: Remove temp directory
+  file:
+    path: "{{ android_sdk_root }}/cmdline-tools-temp"
+    state: absent
+  when: not cmdline_tools.stat.exists
+  tags: [dev-tools, quick]
+
+- name: Accept Android SDK licenses
+  shell: yes | {{ android_sdk_root }}/cmdline-tools/latest/bin/sdkmanager --licenses
+  become_user: "{{ username }}"
+  environment:
+    ANDROID_SDK_ROOT: "{{ android_sdk_root }}"
+  args:
+    creates: "{{ android_sdk_root }}/licenses/android-sdk-license"
+  tags: [dev-tools, quick]
+
+- name: Remove old Android SDK platform
+  file:
+    path: "{{ android_sdk_root }}/platforms/android-34"
+    state: absent
+  tags: [dev-tools, quick]
+
+- name: Install Android SDK components
+  shell: |
+    {{ android_sdk_root }}/cmdline-tools/latest/bin/sdkmanager \
+      "platform-tools" \
+      "platforms;android-36" \
+      "build-tools;28.0.3" \
+      "build-tools;34.0.0" \
+      "emulator" \
+      "cmdline-tools;latest"
+  become_user: "{{ username }}"
+  environment:
+    ANDROID_SDK_ROOT: "{{ android_sdk_root }}"
+  args:
+    creates: "{{ android_sdk_root }}/platforms/android-36"
+  tags: [dev-tools, quick]
+
+- name: Configure Flutter to use Android SDK
+  command: "{{ flutter_install_dir }}/bin/flutter config --android-sdk {{ android_sdk_root }}"
+  become_user: "{{ username }}"
+  environment:
+    ANDROID_SDK_ROOT: "{{ android_sdk_root }}"
+  tags: [dev-tools, quick]
+
+- name: Clean up downloaded zip
+  file:
+    path: "/tmp/commandlinetools-linux.zip"
+    state: absent
+  tags: [dev-tools, quick]
+
+- name: Display Android Studio installation message
+  debug:
+    msg: |
+      Android SDK installed to {{ android_sdk_root }}
+      Android Studio available via: flatpak run {{ android_studio_flatpak_id }}
+      SDK components installed:
+      - platform-tools (adb, fastboot)
+      - Android 34 platform
+      - Build tools 34.0.0
+      - Android emulator
+  tags: [dev-tools, quick]

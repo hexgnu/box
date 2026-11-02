@@ -1,0 +1,22 @@
+---
+# Cap (cap.so) - screen recorder, open source Loom alternative
+#
+# Not on Flathub and not in the Fedora repos. Upstream publishes an official
+# Fedora RPM, but only behind a "latest" redirect on their CDN - there is no
+# versioned URL and the GitHub releases carry no RPM assets. So the URL below
+# always serves whatever upstream considers current.
+#
+# cap_version is therefore a marker for "the version I expect to be installed",
+# not a pin. A mismatch against the installed RPM triggers a reinstall from the
+# latest URL. To upgrade: bump this to the new upstream version and re-run.
+#
+# Footgun: setting cap_version to something *older* than what the CDN serves
+# makes the role reinstall on every run without ever matching. The verify task
+# reports the real installed version so this shows up immediately.
+cap_version: "0.6.1"
+cap_package_name: cap
+cap_rpm_url: "https://cap.so/download/linux-rpm"
+cap_rpm_tmp_path: /tmp/cap-latest.rpm
+
+# Upstream requires glibc 2.39+; Fedora 42 ships 2.41, so this is informational.
+cap_min_glibc: "2.39"

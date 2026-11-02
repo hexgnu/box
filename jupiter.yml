@@ -32,18 +32,28 @@
     - vim
     - pyenv
     - nvm
+    - role: flutter
+      tags: [flutter]
+    - role: android-studio
+      tags: [android-studio]
     - podman
     - developer-tools
+    - role: jujutsu
+      tags: [jujutsu]  # jj VCS (installed from GitHub releases, not in Fedora repos)
     - role: hermes
       tags: [hermes]  # Hermes Agent + Telegram gateway + MCP connectors
     - direnv
     - slack
     - zoom
+    - role: cap
+      tags: [cap]  # Cap screen recorder (official Fedora RPM, not on Flathub)
     - wavebox    # Unified communications (Teams x2, Slack, Email, Zoom)
     - 1password  # 1Password CLI for password management
     - nvidia
-    # - wireguard  # VPN server - DISABLED (needs configuration, failing to start)
-    - ddns       # Dynamic DNS for jupiter.modulus7.com
+    - role: wireguard
+      tags: [wireguard]  # VPN server for remote access
+    - role: ddns
+      tags: [ddns]  # Dynamic DNS for jupiter.modulus7.com
   become_method: sudo
   become: true
   
